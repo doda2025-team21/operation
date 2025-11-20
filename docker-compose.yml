@@ -1,0 +1,23 @@
+services:
+  model-service:
+    image: "${MODEL_IMAGE}:${TAG_VERSION:-latest}"
+    container_name: backend
+    ports:
+      - "${MODEL_PORT:-8081}:${MODEL_PORT:-8081}"
+    environment:
+      MODEL_PORT: "${MODEL_PORT:-8081}"
+    volumes:
+      - ./model:/app/output
+    restart: unless-stopped
+
+  app:
+    image: "${APP_IMAGE}:${TAG_VERSION:-latest}"
+    container_name: frontend
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    environment:
+      APP_PORT: "${APP_PORT:-8080}"
+      MODEL_HOST: "http://model-service:${MODEL_PORT:-8081}"
+    depends_on:
+      - model-service
+    restart: unless-stopped
