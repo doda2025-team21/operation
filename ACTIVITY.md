@@ -12,3 +12,5 @@ and I updated `Dockerfile` (multi-stage build) and `.dockerignore` to exclude mo
 and lastly it supports both volume mounts for custom models and automatic downloads as fallback.
 
 - Ashraf El Attachi: I mostly spent my time working on F4; multi-architecture images. For this I created a yml file, which creates a github workflow that creates releases viable for multiple architectures.
+
+- Ceylin Ece: I worked on F5 and F6. For F5, I implemented multi-stage builds on the Dockerfile of the 'model-service' repository. The final image size decreased from 933 MB to 659 MB. For F6, I made ports and URLs configurable via ENV variables with default values. 
