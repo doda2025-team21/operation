@@ -10,3 +10,5 @@ also I Automatically allow trains model and uploads `.joblib` artifacts to GitHu
 I updated `serve_model.py` to automatically download models from GitHub releases on startup if not present locally
 and I updated `Dockerfile` (multi-stage build) and `.dockerignore` to exclude model files from image
 and lastly it supports both volume mounts for custom models and automatic downloads as fallback.
+
+- Ashraf El Attachi: I mostly spent my time working on F4; multi-architecture images. For this I created a yml file, which creates a github workflow that creates releases viable for multiple architectures.
