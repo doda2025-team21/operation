@@ -1,6 +1,6 @@
 ### Week 1 (Nov 15+)
-- Guotao Gou: https://github.com/doda2025-team21/lib-version/pull/1
-I have worked on F1 and F2 of A1 assignment. Finished lib-version and publish its Maven package to github.
+- Guotao Gou: I have worked on [F1 and F2](https://github.com/doda2025-team21/lib-version/pull/1) of A1 assignment. Finished lib-version and publish its Maven package to github.
+I have worked on [F11](https://github.com/doda2025-team21/lib-version/pull/3), and [add gitbot for automatic tagging and version bumping](https://github.com/doda2025-team21/lib-version/pull/4)
 
 - Dibyendu Gupta: Worked on F7 and working on F8 | Created docker-compose file to successfully start the entire app | Aided the team with uploading all the necessary repositories to app & model-service correctly | performed initial commits for Dockerfiles in app and model-service repos (for other team members to start working on their respective features) | setting up some branching rules: no pushing directly to main, PRs require atleast 1 approver.
   
