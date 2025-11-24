@@ -1,0 +1,38 @@
+---
+# ansible/general.yml
+# General setup for all Kubernetes VMs (Step 3 + Step 4)
+
+- name: General configuration for all Kubernetes VMs
+  hosts: all
+  become: true
+
+  tasks:
+    # Example: keep system packages reasonably fresh (optional but useful)
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    #-----------------------------
+    # Step 4: Register SSH keys
+    #-----------------------------
+
+    - name: Ensure .ssh directory exists for vagrant user
+      file:
+        path: /home/vagrant/.ssh
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: "0700"
+
+    - name: Add all team public SSH keys for vagrant user
+      authorized_key:
+        user: vagrant
+        state: present
+        key: "{{ lookup('file', item) }}"
+      loop: "{{ lookup('fileglob', 'files/ssh-keys/*.pub', wantlist=True) }}"
+
+    # # Reserved for Step 5.
+    # - name: Placeholder - further general setup (swap, br_netfilter, sysctl, etc.)
+    #   debug:
+    #     msg: "General system tuning will be added here in later steps."

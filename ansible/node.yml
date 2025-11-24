@@ -1,0 +1,12 @@
+---
+# ansible/node.yml
+# Worker node specific setup (empty skeleton for now; Step 18+ will go here)
+
+- name: Worker node configuration (placeholder)
+  hosts: "node-*"
+  become: true
+
+  tasks:
+    - name: Placeholder task for worker nodes
+      debug:
+        msg: "Worker-specific Kubernetes setup (kubeadm join, etc.) will be added later."
