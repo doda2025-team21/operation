@@ -1,0 +1,12 @@
+---
+# ansible/ctrl.yml
+# Controller-specific setup (empty skeleton for now; Step 13+ will go here)
+
+- name: Controller specific configuration (placeholder)
+  hosts: ctrl
+  become: true
+
+  tasks:
+    - name: Placeholder task for controller
+      debug:
+        msg: "Controller-specific Kubernetes setup (kubeadm init, flannel, etc.) will be added later."
