@@ -9,6 +9,7 @@ The following are the repositories present in this organization:
 - [model-service](https://github.com/doda2025-team21/model-service) : Backend Python microservice that loads and serves the spam classifier
 - [lib-version](https://github.com/doda2025-team21/lib-version) : Library dependencies ?? //TODO
 
+# A1: Version Release and Containerization
 ## Requirements
 The following needs to be installed before running this project:
 - Docker
@@ -62,3 +63,23 @@ docker compose down
 | **View logs**                        | `docker compose logs`        | Shows combined logs from all services  |
 | **View logs for a specific service** | `docker compose logs app`    | Shows logs only for the app            |
 | **Restart one service**              | `docker compose restart app` | Restarts only the app service          |
+
+
+# A2: Provisioning a Kubernetes Cluster
+## TODO, every group member
+put your ssh public key into ansible/files/ssh-keys/, so that you can ssh into virtual machines easily.
+## How to run
+```bash
+git pull # Pull latest content
+
+# In operation folder.
+vagrant up # If failed, try do it again
+```
+## Test whether it worked
+Make sure you've addedd your ssh public key. Otherwise, you'll need to input username(vagrant) and password(vagrant).
+```bash
+# Try these commands
+ssh vagrant@192.168.56.100
+ssh vagrant@192.168.56.101
+ssh vagrant@192.168.56.102
+```
