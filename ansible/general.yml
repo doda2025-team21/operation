@@ -36,3 +36,66 @@
     # - name: Placeholder - further general setup (swap, br_netfilter, sysctl, etc.)
     #   debug:
     #     msg: "General system tuning will be added here in later steps."
+        
+    #-----------------------------
+    # Step 5: Disable SWAP
+    #-----------------------------
+
+    - name: Disable all swap immediately
+      shell: swapoff -a
+
+    - name: Remove any swap entries from /etc/fstab (permanent disable)
+      lineinfile:
+        path: /etc/fstab
+        regexp: '(\s+)swap(\s+)'
+        state: absent
+
+    # - name: Ensure swap is not active
+    #   command: swapon --summary
+    #   register: swap_status
+    #   changed_when: false
+
+    #-----------------------------
+    # Step 6: Enable br_netfilter + overlay
+    #-----------------------------
+
+    - name: Ensure k8s modules-load config exists
+      copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: |
+          overlay
+          br_netfilter
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Load br_netfilter module
+      modprobe:
+        name: br_netfilter
+
+    - name: Load overlay module
+      modprobe:
+        name: overlay
+
+    #-----------------------------
+    # Step 7: Enable IPv4 forwarding + bridged traffic sysctls
+    #-----------------------------
+
+    - name: Enable IPv4 forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        state: present
+        sysctl_set: yes
+        reload: yes
+
+    - name: Enable bridged IPv4/IPv6 traffic to traverse iptables
+      sysctl:
+        name: "{{ item }}" # could be item.name
+        value: '1'
+        state: present
+        sysctl_set: yes
+        reload: yes
+      loop:
+        - net.bridge.bridge-nf-call-iptables
+        - net.bridge.bridge-nf-call-ip6tables
