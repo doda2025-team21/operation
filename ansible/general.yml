@@ -40,24 +40,19 @@
     #-----------------------------
     # Step 5: Disable SWAP
     #-----------------------------
-
-    # use vagrant up to see if it is working properly
-    # vagrant ssh ctrl
-    # free -h => expected output => Swap:             0B          0B          0B
-    # swapon --show => expected output => no output
-    # cat /etc/fstab => expected output => # /swap.img	none	swap	sw	0	0
-
+    
     # disable swapping temporarily
     - name: Disable SWAP
       ansible.builtin.shell: | 
         swapoff -a
 
     - name: Disable SWAP in fstab
-      replace: 
+      ansible.builtin.lineinfile: 
         path: /etc/fstab
         # if there are issues change the regexp
-        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
-        replace: '# \1'
+        regexp: '^\s*[^#].*\sswap\s'
+        line: '# \g<0>'
+        backrefs: yes
       become: true
 
     #-----------------------------
@@ -111,6 +106,32 @@
         value: '1'
         state: present
       become: true
+
+    #-----------------------------
+    # Step 8: Manage /etc/hosts
+    #-----------------------------
+
+    - name: Write hostname usinh jinja2
+      ansible.builtin.copy:
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          127.0.0.1 localhost
+          127.0.1.1 {{ inventory_hostname }}
+
+          ::1 localhost
+          ff02::1 ip6-allnodes
+          ff02::2 ip6-allrouters
+
+
+          192.168.56.100 ctrl
+          {% for i in range(1, num_workers + 1) %}
+          192.168.56.{{ 100 + i }} node-{{ i }}
+          {% endfor %}
+      become: true
+
 
 
 
