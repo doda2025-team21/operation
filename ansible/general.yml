@@ -36,3 +36,26 @@
     # - name: Placeholder - further general setup (swap, br_netfilter, sysctl, etc.)
     #   debug:
     #     msg: "General system tuning will be added here in later steps."
+
+    #-----------------------------
+    # Step 5: Disable SWAP
+    #-----------------------------
+
+    # use vagrant up to see if it is working properly
+    # vagrant ssh ctrl
+    # free -h => expected output => Swap:             0B          0B          0B
+    # swapon --show => expected output => no output
+    # cat /etc/fstab => expected output => # /swap.img	none	swap	sw	0	0
+
+    # disable swapping temporarily
+    - name: Disable SWAP
+      shell: | 
+        swapoff -a
+
+    - name: Disable SWAP in fstab
+      replace: 
+        path: /etc/fstab
+        # if there are issues change the regexp
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        replace: '# \1'
+
