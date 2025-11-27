@@ -36,66 +36,89 @@
     # - name: Placeholder - further general setup (swap, br_netfilter, sysctl, etc.)
     #   debug:
     #     msg: "General system tuning will be added here in later steps."
-        
+
     #-----------------------------
     # Step 5: Disable SWAP
     #-----------------------------
+    
+    # disable swapping temporarily
+    - name: Disable SWAP
+      ansible.builtin.shell: | 
+        swapoff -a
 
-    - name: Disable all swap immediately
-      shell: swapoff -a
-
-    - name: Remove any swap entries from /etc/fstab (permanent disable)
-      lineinfile:
+    - name: Disable SWAP in fstab
+      ansible.builtin.lineinfile: 
         path: /etc/fstab
-        regexp: '(\s+)swap(\s+)'
-        state: absent
-
-    # - name: Ensure swap is not active
-    #   command: swapon --summary
-    #   register: swap_status
-    #   changed_when: false
+        # if there are issues change the regexp
+        regexp: '^\s*[^#].*\sswap\s'
+        line: '# \g<0>'
+        backrefs: yes
+      become: true
 
     #-----------------------------
-    # Step 6: Enable br_netfilter + overlay
+    # Step 6: br_netfilter
     #-----------------------------
-
-    - name: Ensure k8s modules-load config exists
-      copy:
+    - name : Load br_netfilter-module
+      ansible.builtin.copy:
+        # Remote absolute path where the file should be copied to.
         dest: /etc/modules-load.d/k8s.conf
-        content: |
+        # Content sets the contents of a file directly to the specified value.
+        content: | 
           overlay
           br_netfilter
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
+      become: true
+        
 
-    - name: Load br_netfilter module
-      modprobe:
-        name: br_netfilter
-
-    - name: Load overlay module
-      modprobe:
+    # load kernel modules
+    - name: Load overlay in the running system
+      community.general.modprobe: 
         name: overlay
+        state: present
+      become: true
+
+    - name: Load br_netfilter-module in the running system
+      community.general.modprobe: 
+        name: br_netfilter
+        state: present
+      become: true
 
     #-----------------------------
-    # Step 7: Enable IPv4 forwarding + bridged traffic sysctls
+    # Step 7: Enable IPv4 forwarding
     #-----------------------------
 
-    - name: Enable IPv4 forwarding
-      sysctl:
+    - name: Enable kernel property 'net.ipv4.ip_forward' in all cluster nodes
+      ansible.posix.sysctl:
         name: net.ipv4.ip_forward
         value: '1'
         state: present
-        sysctl_set: yes
-        reload: yes
+      become: true
 
-    - name: Enable bridged IPv4/IPv6 traffic to traverse iptables
-      sysctl:
-        name: "{{ item }}" # could be item.name
+    - name: Enable kernel property 'net.bridge.bridge-nf-call-iptables' in all cluster nodes
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-iptables
         value: '1'
         state: present
-        sysctl_set: yes
-        reload: yes
-      loop:
-        - net.bridge.bridge-nf-call-iptables
-        - net.bridge.bridge-nf-call-ip6tables
+      become: true
+
+    - name: Enable kernel property 'net.bridge.bridge-nf-call-ip6tables' in all cluster nodes
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+        state: present
+      become: true
+
+    #-----------------------------
+    # Step 8: Manage /etc/hosts
+    #-----------------------------
+
+    - name: Write hostname using jinja2
+      ansible.builtin.copy:
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: "0644"
+        content: "{{ lookup('template', 'templates/hosts.j2') }}"
+      become: true
