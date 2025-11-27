@@ -36,3 +36,95 @@
     # - name: Placeholder - further general setup (swap, br_netfilter, sysctl, etc.)
     #   debug:
     #     msg: "General system tuning will be added here in later steps."
+
+    #-----------------------------
+    # Step 5: Disable SWAP
+    #-----------------------------
+    
+    # disable swapping temporarily
+    - name: Disable SWAP
+      ansible.builtin.shell: | 
+        swapoff -a
+
+    - name: Disable SWAP in fstab
+      ansible.builtin.lineinfile: 
+        path: /etc/fstab
+        # if there are issues change the regexp
+        regexp: '^\s*[^#].*\sswap\s'
+        line: '# \g<0>'
+        backrefs: yes
+      become: true
+
+    #-----------------------------
+    # Step 6: br_netfilter
+    #-----------------------------
+    - name : Load br_netfilter-module
+      ansible.builtin.copy:
+        # Remote absolute path where the file should be copied to.
+        dest: /etc/modules-load.d/k8s.conf
+        # Content sets the contents of a file directly to the specified value.
+        content: | 
+          overlay
+          br_netfilter
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+        
+
+    # load kernel modules
+    - name: Load overlay in the running system
+      community.general.modprobe: 
+        name: overlay
+        state: present
+      become: true
+
+    - name: Load br_netfilter-module in the running system
+      community.general.modprobe: 
+        name: br_netfilter
+        state: present
+      become: true
+
+    #-----------------------------
+    # Step 7: Enable IPv4 forwarding
+    #-----------------------------
+
+    - name: Enable kernel property 'net.ipv4.ip_forward' in all cluster nodes
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        state: present
+      become: true
+
+    - name: Enable kernel property 'net.bridge.bridge-nf-call-iptables' in all cluster nodes
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-iptables
+        value: '1'
+        state: present
+      become: true
+
+    - name: Enable kernel property 'net.bridge.bridge-nf-call-ip6tables' in all cluster nodes
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+        state: present
+      become: true
+
+    #-----------------------------
+    # Step 8: Manage /etc/hosts
+    #-----------------------------
+
+    - name: Write hostname usinh jinja2
+      ansible.builtin.copy:
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: "0644"
+        content: "{{ lookup('template', 'templates/hosts.j2') }}"
+      become: true
+
+
+
+
+
+
