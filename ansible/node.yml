@@ -1,12 +1,43 @@
 ---
 # ansible/node.yml
-# Worker node specific setup (empty skeleton for now; Step 18+ will go here)
+# Worker node specific setup (Steps 18-19)
 
-- name: Worker node configuration (placeholder)
+- name: Worker node configuration
   hosts: "node-*"
   become: true
 
   tasks:
-    - name: Placeholder task for worker nodes
-      debug:
-        msg: "Worker-specific Kubernetes setup (kubeadm join, etc.) will be added later."
+    #-----------------------------
+    # Step 18: Generate Join Command
+    #-----------------------------
+    # This task runs on the controller (using delegate_to)
+    # to generate the kubeadm join command
+    
+    - name: Generate kubeadm join command
+      ansible.builtin.shell: |
+        kubeadm token create --print-join-command
+      delegate_to: ctrl
+      register: join_command
+      run_once: true
+      changed_when: false
+    
+    #-----------------------------
+    # Step 19: Run Join Command
+    #-----------------------------
+    # This task joins the worker node to the cluster
+    # It checks if the node is already joined to make it idempotent
+    
+    - name: Check if node is already part of cluster
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+    
+    - name: Join the Kubernetes cluster
+      ansible.builtin.shell: "{{ join_command.stdout }}"
+      when: not kubelet_conf.stat.exists
+      register: join_result
+    
+    - name: Display join result
+      ansible.builtin.debug:
+        var: join_result.stdout_lines
+      when: join_result.changed

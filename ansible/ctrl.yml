@@ -1,12 +1,30 @@
 ---
 # ansible/ctrl.yml
-# Controller-specific setup (empty skeleton for now; Step 13+ will go here)
+# Controller-specific setup (Steps 13-17 will go here)
 
-- name: Controller specific configuration (placeholder)
+- name: Controller specific configuration
   hosts: ctrl
   become: true
 
   tasks:
-    - name: Placeholder task for controller
-      debug:
-        msg: "Controller-specific Kubernetes setup (kubeadm init, flannel, etc.) will be added later."
+    #-----------------------------
+    # Step 17: Install Helm plugin (Optional)
+    #-----------------------------
+    # Note: This step assumes Helm is already installed (Step 16)
+    # It installs the helm-diff plugin to improve idempotence detection
+    
+    - name: Check if helm-diff plugin is already installed
+      ansible.builtin.shell: |
+        helm plugin list | grep -q diff
+      become_user: vagrant
+      register: helm_diff_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Install helm-diff plugin
+      ansible.builtin.shell: |
+        helm plugin install https://github.com/databus23/helm-diff
+      become_user: vagrant
+      when: helm_diff_check.rc != 0
+      register: helm_diff_install
+      changed_when: helm_diff_install.rc == 0
