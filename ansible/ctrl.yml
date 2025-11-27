@@ -27,22 +27,23 @@
       when: not check_cluster_init.stat.exists
 
     #-----------------------------
-    # Step 17: Install Helm plugin (Optional)
+    # Step 17: Install Helm plugin
     #-----------------------------
-    # Note: This step assumes Helm is already installed (Step 16)
+    # Note: Commented out for now - requires Step 16 (Helm installation)
+    # Will be enabled once steps 14-16 are merged
     
-    - name: Check if helm-diff plugin is already installed
-      ansible.builtin.shell: |
-        helm plugin list | grep -q diff
-      become_user: vagrant
-      register: helm_diff_check
-      failed_when: false
-      changed_when: false
-    
-    - name: Install helm-diff plugin
-      ansible.builtin.shell: |
-        helm plugin install https://github.com/databus23/helm-diff
-      become_user: vagrant
-      when: helm_diff_check.rc != 0
-      register: helm_diff_install
-      changed_when: helm_diff_install.rc == 0
+    # - name: Check if helm-diff plugin is already installed
+    #   ansible.builtin.shell: |
+    #     helm plugin list | grep -q diff
+    #   become_user: vagrant
+    #   register: helm_diff_check
+    #   failed_when: false
+    #   changed_when: false
+    # 
+    # - name: Install helm-diff plugin
+    #   ansible.builtin.shell: |
+    #     helm plugin install https://github.com/databus23/helm-diff
+    #   become_user: vagrant
+    #   when: helm_diff_check.rc != 0
+    #   register: helm_diff_install
+    #   changed_when: helm_diff_install.rc == 0
