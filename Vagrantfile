@@ -17,7 +17,9 @@ NODE_MEMORY   = ENV.fetch("NODE_MEMORY", "6144").to_i  # MB
 Vagrant.configure("2") do |config|
   # All VMs use Ubuntu 24.04
   config.vm.box = "bento/ubuntu-24.04"
+  # TODO: should vm.box have a version???
 
+  
   # Do not replace default insecure key; makes Ansible/Vagrant work out of the box
   config.ssh.insert_key = false
 
