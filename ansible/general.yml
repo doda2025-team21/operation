@@ -114,7 +114,7 @@
     # Step 8: Manage /etc/hosts
     #-----------------------------
 
-    - name: Write hostname usinh jinja2
+    - name: Write hostname using jinja2
       ansible.builtin.copy:
         dest: /etc/hosts
         owner: root
@@ -122,9 +122,4 @@
         mode: "0644"
         content: "{{ lookup('template', 'templates/hosts.j2') }}"
       become: true
-
-
-
-
-
 
