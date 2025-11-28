@@ -23,3 +23,5 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 # Week 2 (Nov 24+)
 - Guotao Gou, [finished step 1 to 4](https://github.com/doda2025-team21/operation/pull/8).
+
+- Madhav Chawla: For Steps 21–23, I set up the cluster’s networking and management layers by installing the Nginx Ingress Controller via Helm and assigning it a static MetalLB IP for external routing (Step 21), then deployed the Kubernetes Dashboard using Helm, created an admin ServiceAccount with full cluster access, and exposed the dashboard through an Ingress rule (Step 22). Finally, I installed Istio by copying the Istio distribution into the controller VM, installing istioctl, allowing Istio with a custom operator configuration that assigns the Istio ingress gateway its own static MetalLB IP (Step 23).
