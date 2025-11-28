@@ -53,11 +53,22 @@
         remote_src: true
       when: check_cluster_init.stat.exists
 
+    # - name: Copy admin.conf to host machine
+    #   ansible.builtin.copy:
+    #     src: /etc/kubernetes/admin.conf
+    #     dest: /vagrant/admin.conf
+    #     mode: "0644"
+    #     remote_src: true
+    #   when: check_cluster_init.stat.exists
     - name: Copy admin.conf to host machine
-      ansible.builtin.copy:
+      ansible.builtin.fetch:
         src: /etc/kubernetes/admin.conf
-        dest: /vagrant/admin.conf
-        mode: "0644"
-        remote_src: true
-      when: check_cluster_init.stat.exists
+        dest: ./kubeconfig
+        flat: yes
+
+    #-----------------------------
+    # Step 15: Install Flannel CNI (Pod Network)
+    #-----------------------------
+
+
 
