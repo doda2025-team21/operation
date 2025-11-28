@@ -56,7 +56,7 @@
     - name: Copy admin.conf to host machine
       ansible.builtin.fetch:
         src: /etc/kubernetes/admin.conf
-        dest: ./kubeconfig
+        dest: ../kubeconfig
         flat: yes
 
     #-----------------------------
