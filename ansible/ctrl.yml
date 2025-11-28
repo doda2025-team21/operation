@@ -70,5 +70,28 @@
     # Step 15: Install Flannel CNI (Pod Network)
     #-----------------------------
 
+    - name: Download Flannel manifest
+      ansible.builtin.get_url:
+        url: https://github.com/flannel-io/flannel/releases/download/v0.26.7/kube-flannel.yml
+        dest: /home/vagrant/kube-flannel.yml
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
 
+    - name: Patch Flannel to use eth1 interface
+      ansible.builtin.replace:
+        path: /home/vagrant/kube-flannel.yml
+        regexp: '^(\s*)args:\s*$'
+        replace: '\1args:\n\1  - --iface=eth1'
+
+    - name: Apply Flannel manifest
+      ansible.builtin.command: kubectl apply -f /home/vagrant/kube-flannel.yml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: flannel_apply
+      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+      # become: false
+
+      # Become false ensures we run as the 'vagrant' user, utilizing the config we set up in Step 14
+    
 
