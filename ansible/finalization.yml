@@ -167,3 +167,42 @@
     label_selectors:
       - k8s-app=kubernetes-dashboard
     timeout: 60
+
+
+# STEP 23: INSTALL ISTIO
+
+- name: Copy Istio directory to controller
+  ansible.builtin.copy:
+    src: files/istio/
+    dest: /home/vagrant/istio/
+    owner: vagrant
+    group: vagrant
+    mode: "0755"
+
+- name: Copy istio-config.yml
+  ansible.builtin.copy:
+    src: files/istio-config.yml
+    dest: /home/vagrant/istio-config.yml
+    owner: vagrant
+    group: vagrant
+    mode: "0644"
+
+- name: Install istioctl binary
+  ansible.builtin.copy:
+    src: files/istio/bin/istioctl
+    dest: /usr/local/bin/istioctl
+    mode: "0755"
+
+- name: Install Istio with custom config
+  ansible.builtin.shell: |
+    istioctl install -y -f /home/vagrant/istio-config.yml
+  become_user: vagrant
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+
+- name: Wait for Istio ingress gateway to be ready
+  kubernetes.core.k8s_wait:
+    namespace: istio-system
+    label_selectors:
+      - app=istio-ingressgateway
+    timeout: 60

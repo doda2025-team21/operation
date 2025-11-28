@@ -1,0 +1,19 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            type: LoadBalancer
+            loadBalancerIP: 192.168.56.96
+
+- name: Copy istio-config.yml
+  ansible.builtin.copy:
+    src: files/istio-config.yml
+    dest: /home/vagrant/istio-config.yml
+    owner: vagrant
+    group: vagrant
+    mode: "0644"
