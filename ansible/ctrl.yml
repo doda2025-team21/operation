@@ -1,12 +1,49 @@
 ---
 # ansible/ctrl.yml
-# Controller-specific setup (empty skeleton for now; Step 13+ will go here)
+# Controller-specific setup (Steps 13-17)
 
-- name: Controller specific configuration (placeholder)
+- name: Controller specific configuration
   hosts: ctrl
   become: true
 
   tasks:
-    - name: Placeholder task for controller
-      debug:
-        msg: "Controller-specific Kubernetes setup (kubeadm init, flannel, etc.) will be added later."
+
+    #-----------------------------
+    # Step 13: kubeadm initialization
+    #-----------------------------
+
+    - name: Check if cluster is already initialized
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: check_cluster_init
+
+    - name: Initialize Kubernetes control plane if not initialized
+      ansible.builtin.command: >
+        kubeadm init
+        --apiserver-advertise-address=192.168.56.100
+        --node-name ctrl
+        --pod-network-cidr=10.244.0.0/16
+        --ignore-preflight-errors=NumCPU
+      when: not check_cluster_init.stat.exists
+
+    #-----------------------------
+    # Step 17: Install Helm plugin
+    #-----------------------------
+    # Note: Commented out for now - requires Step 16 (Helm installation)
+    # Will be enabled once steps 14-16 are merged
+    
+    # - name: Check if helm-diff plugin is already installed
+    #   ansible.builtin.shell: |
+    #     helm plugin list | grep -q diff
+    #   become_user: vagrant
+    #   register: helm_diff_check
+    #   failed_when: false
+    #   changed_when: false
+    # 
+    # - name: Install helm-diff plugin
+    #   ansible.builtin.shell: |
+    #     helm plugin install https://github.com/databus23/helm-diff
+    #   become_user: vagrant
+    #   when: helm_diff_check.rc != 0
+    #   register: helm_diff_install
+    #   changed_when: helm_diff_install.rc == 0
