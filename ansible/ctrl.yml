@@ -17,6 +17,7 @@
         path: /etc/kubernetes/admin.conf
       register: check_cluster_init
 
+    # added ignore to ignore kubeadm's pre-flight resource allocation checklist
     - name: Initialize Kubernetes control plane if not initialized
       ansible.builtin.command: >
         kubeadm init
@@ -26,3 +27,37 @@
         --ignore-preflight-errors=NumCPU
       when: not check_cluster_init.stat.exists
     
+    #-----------------------------
+    # Step 14: Setup kubectl for vagrant user and host
+    #-----------------------------
+
+    # 0755 means owners have full access (read, write, execute) whereas groups and other have
+    # read and execute access
+    - name: Ensure .kube directory exists
+      ansible.builtin.file:
+        path: /home/vagrant/.kube
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: "0755"
+      when: check_cluster_init.stat.exists
+
+    # 0644 means owners have read & write access, groups/others have only read access
+    - name: Copy admin.conf into kube config
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/vagrant/.kube/config
+        owner: vagrant
+        group: vagrant
+        mode: "0644"
+        remote_src: true
+      when: check_cluster_init.stat.exists
+
+    - name: Copy admin.conf to host machine
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /vagrant/admin.conf
+        mode: "0644"
+        remote_src: true
+      when: check_cluster_init.stat.exists
+

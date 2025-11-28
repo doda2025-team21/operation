@@ -17,8 +17,6 @@ NODE_MEMORY   = ENV.fetch("NODE_MEMORY", "6144").to_i  # MB
 Vagrant.configure("2") do |config|
   # All VMs use Ubuntu 24.04
   config.vm.box = "bento/ubuntu-24.04"
-  # TODO: should vm.box have a version???
-
   
   # Do not replace default insecure key; makes Ansible/Vagrant work out of the box
   config.ssh.insert_key = false
@@ -29,6 +27,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "ctrl" do |ctrl|
     ctrl.vm.hostname = "ctrl"
 
+  # TODO: should vm.box have a version???
     # NIC 1: default NAT (for internet access) - created automatically by Vagrant
 
     # NIC 2: host-only network, fixed IP 192.168.56.100 (Step 2)
@@ -38,6 +37,29 @@ Vagrant.configure("2") do |config|
       vb.name   = "k8s-ctrl"
       vb.cpus   = CTRL_CPUS
       vb.memory = CTRL_MEMORY
+    end
+
+    #----------------------------------------------------------
+    # Ansible provisioning (Step 3 + Step 4)
+    #----------------------------------------------------------
+    # 1) General playbook: runs on all nodes (Step 3: provision + Step 4: SSH keys)
+    config.vm.provision "ansible" do |ansible|
+      ansible.playbook = "ansible/general.yml"
+      ansible.inventory_path = nil          # let Vagrant auto-generate
+      ansible.limit = "all"
+      ansible.extra_vars = {
+        num_workers: NUM_WORKERS
+      }
+    end
+
+    # 2) Controller-specific playbook (later steps will live here)
+    config.vm.provision "ansible" do |ansible|
+      ansible.playbook = "ansible/ctrl.yml"
+      ansible.inventory_path = nil
+      ansible.limit = "ctrl"
+      ansible.extra_vars = {
+        num_workers: NUM_WORKERS
+      }
     end
   end
 
@@ -59,45 +81,29 @@ Vagrant.configure("2") do |config|
         vb.cpus   = NODE_CPUS
         vb.memory = NODE_MEMORY
       end
+
+      #----------------------------------------------------------
+      # Ansible provisioning (Step 3 + Step 4)
+      #----------------------------------------------------------
+      # 1) General playbook: runs on all nodes (Step 3: provision + Step 4: SSH keys)
+      config.vm.provision "ansible" do |ansible|
+        ansible.playbook = "ansible/general.yml"
+        ansible.inventory_path = nil          # let Vagrant auto-generate
+        ansible.limit = "all"
+        ansible.extra_vars = {
+          num_workers: NUM_WORKERS
+        }
+      end
+
+      # 2) Worker-specific provisioning (later steps will live here)
+      config.vm.provision "ansible" do |ansible|
+        ansible.playbook = "ansible/node.yml"
+        ansible.inventory_path = nil
+        ansible.limit = "node-*"
+        ansible.extra_vars = {
+          num_workers: NUM_WORKERS
+        }
+      end
     end
-  end
-
-  #----------------------------------------------------------
-  # Ansible provisioning (Step 3 + Step 4)
-  #----------------------------------------------------------
-  # 说明：
-  # - 不指定 inventory_path，Vagrant 会自动生成 inventory，
-  #   里面有主机名 ctrl, node-1, node-2, ...
-  # - 我们通过 hosts pattern 区分 playbook 的作用范围
-  # - extra_vars 把 num_workers 传进去，后面可以用
-
-  # 1) General playbook: runs on all nodes (Step 3: provision + Step 4: SSH keys)
-  config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "ansible/general.yml"
-    ansible.inventory_path = nil          # let Vagrant auto-generate
-    ansible.limit = "all"
-    ansible.extra_vars = {
-      num_workers: NUM_WORKERS
-    }
-  end
-
-  # 2) Controller-specific playbook (later steps will live here)
-  config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "ansible/ctrl.yml"
-    ansible.inventory_path = nil
-    ansible.limit = "ctrl"
-    ansible.extra_vars = {
-      num_workers: NUM_WORKERS
-    }
-  end
-
-  # 3) Worker-specific playbook (later steps will live here)
-  config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "ansible/node.yml"
-    ansible.inventory_path = nil
-    ansible.limit = "node-*"
-    ansible.extra_vars = {
-      num_workers: NUM_WORKERS
-    }
   end
 end
