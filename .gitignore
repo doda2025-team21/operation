@@ -2,3 +2,7 @@
 /model
 .vagrant
 *.log
+
+operation/ansible/files/istio/
+operation/ansible/files/istio-config.yml
+

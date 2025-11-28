@@ -121,3 +121,48 @@ milestone cannot be considered achieved if the issue isn't resolved.
     <img src="https://raw.githubusercontent.com/cncf/artwork/master/other/cncf/horizontal/color/cncf-color.svg" width="300" alt="Cloud Native Computing Foundation logo"/>
     <p>Istio is a <a href="https://cncf.io">Cloud Native Computing Foundation</a> project.</p>
 </div>
+
+
+
+## Istio Installation Summary
+
+The cluster was extended with Istio to enable service-mesh capabilities such as traffic management, secure service-to-service communication, and advanced observability. Istio was installed using the official `istioctl` installer and configured with a custom `IstioOperator` manifest to deploy the `istio-ingressgateway` with a static MetalLB-provided `LoadBalancer` IP. This ensures consistent external access to services routed through the mesh. The installation includes the full control plane (istiod) and an ingress gateway ready to handle mesh-aware traffic.
+
+### What This Setup Does
+
+- Deploys Istio’s control plane (`istiod`) for managing service discovery, certificates, traffic policies, and telemetry.
+- Installs the Istio Ingress Gateway as a `LoadBalancer` service using a stable external IP for consistent routing.
+- Prepares the cluster for advanced traffic routing, mTLS encryption, telemetry collection, canary rollouts, and zero-trust networking models.
+- Integrates directly with MetalLB, enabling external access to mesh-enabled services on bare-metal Kubernetes.
+
+### How to Test the Installation
+
+1. Verify that Istio system components are running:
+   ```bash
+   kubectl get pods -n istio-system
+Confirm that the ingress gateway received the correct external IP:
+
+bash
+
+kubectl get svc -n istio-system istio-ingressgateway
+Deploy a sample workload such as the official Istio httpbin or bookinfo application:
+
+bash
+
+kubectl apply -f samples/httpbin/httpbin.yaml
+Expose the workload with an Istio Gateway and VirtualService:
+
+bash
+
+kubectl apply -f samples/httpbin/httpbin-gateway.yaml
+Send a test request to the ingress gateway’s external IP:
+
+bash
+
+curl http://<loadbalancer-ip>/status/200
+Optional: Inspect traffic, metrics, and mesh behavior using:
+
+bash
+
+istioctl proxy-config routes <pod-name> -n <namespace>
+istioctl proxy-status
