@@ -2,3 +2,5 @@
 /model
 .vagrant
 *.log
+*.conf
+kubeconfig
