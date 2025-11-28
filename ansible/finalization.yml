@@ -1,0 +1,111 @@
+---
+# ansible/finalization.yml
+# Final cluster setup steps that require a fully functional cluster (Step 20+)
+# Run this after the cluster is initialized with:
+# ansible-playbook -u vagrant -i 192.168.56.100, finalization.yml
+
+- name: Finalize Kubernetes cluster setup
+  hosts: ctrl
+  become: true
+
+  tasks:
+    #-----------------------------
+    # Step 20: Install MetalLB
+    #-----------------------------
+    # MetalLB provides load balancer support for bare metal Kubernetes installations
+    # It allows LoadBalancer services to get external IPs
+
+    - name: Create temporary directory for MetalLB files
+      ansible.builtin.file:
+        path: /tmp/metallb
+        state: directory
+        mode: '0755'
+
+    - name: Download MetalLB native manifest
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+        dest: /tmp/metallb/metallb-native-0.14.9.yml
+        mode: '0644'
+
+    - name: Apply MetalLB CRDs
+      ansible.builtin.shell: |
+        kubectl apply -f /tmp/metallb/metallb-native-0.14.9.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: metallb_apply
+      changed_when: "'created' in metallb_apply.stdout or 'configured' in metallb_apply.stdout"
+
+    - name: Wait for MetalLB controller to be ready
+      ansible.builtin.shell: |
+        kubectl wait -n metallb-system \
+          -l app=metallb,component=controller \
+          --for=condition=ready pod \
+          --timeout=60s
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: metallb_wait
+      retries: 3
+      delay: 10
+      until: metallb_wait.rc == 0
+
+    - name: Create MetalLB IPAddressPool
+      ansible.builtin.copy:
+        dest: /tmp/metallb/ipaddresspool.yml
+        content: |
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
+          metadata:
+            name: default-pool
+            namespace: metallb-system
+          spec:
+            addresses:
+            - 192.168.56.90-192.168.56.99
+        mode: '0644'
+
+    - name: Apply MetalLB IPAddressPool
+      ansible.builtin.shell: |
+        kubectl apply -f /tmp/metallb/ipaddresspool.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: pool_apply
+      changed_when: "'created' in pool_apply.stdout or 'configured' in pool_apply.stdout"
+
+    - name: Create MetalLB L2Advertisement
+      ansible.builtin.copy:
+        dest: /tmp/metallb/l2advertisement.yml
+        content: |
+          apiVersion: metallb.io/v1beta1
+          kind: L2Advertisement
+          metadata:
+            name: default-l2-adv
+            namespace: metallb-system
+          spec:
+            ipAddressPools:
+            - default-pool
+        mode: '0644'
+
+    - name: Apply MetalLB L2Advertisement
+      ansible.builtin.shell: |
+        kubectl apply -f /tmp/metallb/l2advertisement.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: l2_apply
+      changed_when: "'created' in l2_apply.stdout or 'configured' in l2_apply.stdout"
+
+    - name: Verify MetalLB installation
+      ansible.builtin.shell: |
+        kubectl get pods -n metallb-system
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: metallb_pods
+      changed_when: false
+
+    - name: Display MetalLB pods status
+      ansible.builtin.debug:
+        var: metallb_pods.stdout_lines
+
