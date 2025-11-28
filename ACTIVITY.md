@@ -23,3 +23,14 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 # Week 2 (Nov 24+)
 - Guotao Gou, [finished step 1 to 4](https://github.com/doda2025-team21/operation/pull/8).
+- Dibyendu:
+    - Worked on Steps 9-15
+    - [PR for this week](https://github.com/doda2025-team21/operation/pull/13): All the steps were included into this 1 PR (I acknowledge that this isn't the best software development practice, but it had to be done because the person who was supposed to work on steps 9-12 didn't complete the work on time). This causes a cascade of dependencies on these tasks which needed to be implemented before the other ones could be attempted and tested for correctness.
+    - Install container runtime (containerd), Kubernetes components (kubelet, kubeadm, kubectl), Helm, and configure containerd with systemd cgroups. (Steps 9-12 & 16)
+    - On the controller (ctrl), run kubeadm init with the correct pod CIDR, then set up the kubeconfig so kubectl works. (Steps 13-14)
+    - Apply the Flannel manifest so nodes can communicate (kubectl apply -f kube-flannel.yml), enabling networking across the cluster. (Step 15)
+
+
+- Madhav Chawla: For Steps 21–23, I set up the cluster’s networking and management layers by installing the Nginx Ingress Controller via Helm and assigning it a static MetalLB IP for external routing (Step 21), then deployed the Kubernetes Dashboard using Helm, created an admin ServiceAccount with full cluster access, and exposed the dashboard through an Ingress rule (Step 22). Finally, I installed Istio by copying the Istio distribution into the controller VM, installing istioctl, allowing Istio with a custom operator configuration that assigns the Istio ingress gateway its own static MetalLB IP (Step 23).
+
+- Tae Yong Kwon: I prepared the automation to finish the Kubernetes cluster by adding Helm support, automating worker node joining, and installing MetalLB. For Helm, I added tasks to install the helmdiff plugin. For worker nodes, I used Ansible to generate a single join command on the controller and ensured each worker only joins if it hasn't already, keeping the process idempotent. Finally, I created a separate finalization playbook that installs MetalLB, sets up an IP pool (192.168.56.90–99), configures an L2Advertisementand verifies the deployment once the cluster is fully running (task 17-20)
