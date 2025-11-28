@@ -109,3 +109,61 @@
       ansible.builtin.debug:
         var: metallb_pods.stdout_lines
 
+# STEP 21: NGINX INGRESS
+
+- name: Add ingress-nginx Helm repository
+  kubernetes.core.helm_repository:
+    name: ingress-nginx
+    repo_url: https://kubernetes.github.io/ingress-nginx
+
+- name: Install Nginx Ingress Controller
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    create_namespace: true
+    values:
+      controller:
+        service:
+          loadBalancerIP: "192.168.56.95"
+
+- name: Wait for ingress controller to become ready
+  kubernetes.core.k8s_wait:
+    namespace: ingress-nginx
+    label_selectors:
+      - app.kubernetes.io/component=controller
+    timeout: 60
+
+
+# STEP 22: KUBERNETES DASHBOARD
+
+- name: Add Kubernetes Dashboard Helm repository
+  kubernetes.core.helm_repository:
+    name: kubernetes-dashboard
+    repo_url: https://kubernetes.github.io/dashboard/
+
+- name: Install Kubernetes Dashboard
+  kubernetes.core.helm:
+    name: kubernetes-dashboard
+    chart_ref: kubernetes-dashboard/kubernetes-dashboard
+    release_namespace: kubernetes-dashboard
+    create_namespace: true
+    values:
+      protocolHttp: true
+
+- name: Create Dashboard admin user
+  kubernetes.core.k8s:
+    state: present
+    src: files/dashboard-admin-user.yml
+
+- name: Deploy Dashboard Ingress
+  kubernetes.core.k8s:
+    state: present
+    src: files/dashboard-ingress.yml
+
+- name: Wait for Kubernetes Dashboard pods
+  kubernetes.core.k8s_wait:
+    namespace: kubernetes-dashboard
+    label_selectors:
+      - k8s-app=kubernetes-dashboard
+    timeout: 60
