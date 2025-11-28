@@ -19,7 +19,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"
 
   # Do not replace default insecure key; makes Ansible/Vagrant work out of the box
-  config.ssh.insert_key = false
+  # config.ssh.insert_key = false
 
   #------------------------
   # Controller node: ctrl
