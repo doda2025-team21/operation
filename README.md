@@ -96,7 +96,7 @@ To request a specific IP from MetalLB, override controller.service.loadBalancerI
 
 ```bash
 helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --set controller.service.loadBalancerIP=192.168.100.240
+  --set controller.service.loadBalancerIP=192.168.56.95
 ```
 
 If using a values file, set controller.service.loadBalancerIP in your values.yml and install with:

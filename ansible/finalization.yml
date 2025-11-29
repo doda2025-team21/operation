@@ -120,6 +120,7 @@
       kubernetes.core.helm:
         name: ingress-nginx
         chart_ref: ingress-nginx/ingress-nginx
+        chart_version: "4.12.2"
         release_namespace: ingress-nginx
         create_namespace: true
         values:
@@ -134,6 +135,9 @@
         label_selectors:
           - app.kubernetes.io/component=controller
         timeout: 60
+        wait_condition:
+          type: Ready
+          status: "True"
 
 
 # STEP 22: KUBERNETES DASHBOARD
@@ -147,6 +151,7 @@
       kubernetes.core.helm:
         name: kubernetes-dashboard
         chart_ref: kubernetes-dashboard/kubernetes-dashboard
+        chart_version: "7.11.1"
         release_namespace: kubernetes-dashboard
         create_namespace: true
 
@@ -167,6 +172,9 @@
         label_selectors:
           - k8s-app=kubernetes-dashboard
         timeout: 60
+        wait_condition:
+          type: Ready
+          status: "True"
 
 # STEP 23: ISTIO
 
@@ -186,10 +194,12 @@
         creates: /home/vagrant/istio-1.25.2
       become_user: vagrant
 
-    - name: Move istioctl to /usr/local/bin
-      ansible.builtin.command: mv /home/vagrant/istio-1.25.2/bin/istioctl /usr/local/bin/istioctl
-      args:
-        creates: /usr/local/bin/istioctl
+    - name: Copy istioctl to /usr/local/bin
+      ansible.builtin.copy:
+        src: /home/vagrant/istio-1.25.2/bin/istioctl
+        dest: /usr/local/bin/istioctl
+        remote_src: true
+        mode: '0755'
       become: true
 
     - name: Ensure istioctl is executable and owned by vagrant
