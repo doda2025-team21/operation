@@ -8,10 +8,6 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-passthrough: "true"
 spec:
   ingressClassName: nginx
-  tls:
-    - hosts:
-        - dashboard.local
-      secretName: dashboard-tls
   rules:
     - host: dashboard.local
       http:

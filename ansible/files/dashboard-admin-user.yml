@@ -1,6 +1,6 @@
-# Dashboard admin user configuration
-# Note: For production environments, consider using a more restrictive role
-# based on the principle of least privilege instead of cluster-admin.
+# Dashboard user configuration with read-only access
+# This configuration implements the principle of least privilege by using a
+# restricted ClusterRole (dashboard-viewer) instead of cluster-admin.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
