@@ -202,13 +202,6 @@
         mode: '0755'
       become: true
 
-    - name: Ensure istioctl is executable and owned by vagrant
-      ansible.builtin.file:
-        path: /usr/local/bin/istioctl
-        owner: vagrant
-        group: vagrant
-        mode: '0755'
-
     - name: Check if Istio is already installed
       kubernetes.core.k8s_info:
         kind: Deployment

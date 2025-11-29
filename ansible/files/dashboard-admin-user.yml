@@ -14,7 +14,7 @@ metadata:
   name: dashboard-viewer
 rules:
   - apiGroups: [""]
-    resources: ["pods", "services", "endpoints", "configmaps", "secrets", "nodes", "namespaces", "persistentvolumeclaims", "persistentvolumes"]
+    resources: ["pods", "services", "endpoints", "configmaps", "nodes", "namespaces", "persistentvolumeclaims", "persistentvolumes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
