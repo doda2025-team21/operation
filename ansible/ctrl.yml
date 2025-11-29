@@ -17,6 +17,7 @@
         path: /etc/kubernetes/admin.conf
       register: check_cluster_init
 
+    # added ignore to ignore kubeadm's pre-flight resource allocation checklist
     - name: Initialize Kubernetes control plane if not initialized
       ansible.builtin.command: >
         kubeadm init
@@ -25,25 +26,103 @@
         --pod-network-cidr=10.244.0.0/16
         --ignore-preflight-errors=NumCPU
       when: not check_cluster_init.stat.exists
+    
+    #-----------------------------
+    # Step 14: Setup kubectl for vagrant user and host
+    #-----------------------------
+
+    # 0755 means owners have full access (read, write, execute) whereas groups and other have
+    # read and execute access
+    - name: Ensure .kube directory exists
+      ansible.builtin.file:
+        path: /home/vagrant/.kube
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: "0755"
+      when: check_cluster_init.stat.exists
+
+    # 0644 means owners have read & write access, groups/others have only read access
+    - name: Copy admin.conf into kube config
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/vagrant/.kube/config
+        owner: vagrant
+        group: vagrant
+        mode: "0644"
+        remote_src: true
+      when: check_cluster_init.stat.exists
+
+    - name: Copy admin.conf to host machine
+      ansible.builtin.fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: ../kubeconfig
+        flat: yes
 
     #-----------------------------
-    # Step 17: Install Helm plugin
+    # Step 15: Install Flannel CNI (Pod Network)
     #-----------------------------
-    # Note: Commented out for now - requires Step 16 (Helm installation)
-    # Will be enabled once steps 14-16 are merged
+
+    - name: Download Flannel manifest
+      ansible.builtin.get_url:
+        url: https://github.com/flannel-io/flannel/releases/download/v0.26.7/kube-flannel.yml
+        dest: /home/vagrant/kube-flannel.yml
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+
+    - name: Patch Flannel to use eth1 interface
+      ansible.builtin.replace:
+        path: /home/vagrant/kube-flannel.yml
+        regexp: '^(\s*)args:\s*$'
+        replace: '\1args:\n\1  - --iface=eth1'
+
+    - name: Apply Flannel manifest
+      ansible.builtin.command: kubectl apply -f /home/vagrant/kube-flannel.yml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: flannel_apply
+      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+      
+    # -----------------------------
+    # Step 16: Install Helm
+    # -----------------------------
+
+    - name: Download and create Helm GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey \
+        | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+      args:
+        creates: /usr/share/keyrings/helm.gpg
+
+    - name: Add Helm apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+        state: present
+        filename: helm-stable-debian
+
+    - name: Install Helm
+      ansible.builtin.apt:
+        name: helm
+        state: present
+        update_cache: yes
+
+    # -----------------------------
+    # Step 17: Install Helm plugin
+    # -----------------------------
+
+    - name: Check if helm-diff plugin is already installed
+      ansible.builtin.shell: |
+        helm plugin list | grep -q diff
+      become_user: vagrant
+      register: helm_diff_check
+      failed_when: false
+      changed_when: false
     
-    # - name: Check if helm-diff plugin is already installed
-    #   ansible.builtin.shell: |
-    #     helm plugin list | grep -q diff
-    #   become_user: vagrant
-    #   register: helm_diff_check
-    #   failed_when: false
-    #   changed_when: false
-    # 
-    # - name: Install helm-diff plugin
-    #   ansible.builtin.shell: |
-    #     helm plugin install https://github.com/databus23/helm-diff
-    #   become_user: vagrant
-    #   when: helm_diff_check.rc != 0
-    #   register: helm_diff_install
-    #   changed_when: helm_diff_install.rc == 0
+    - name: Install helm-diff plugin
+      ansible.builtin.shell: |
+        helm plugin install https://github.com/databus23/helm-diff
+      become_user: vagrant
+      when: helm_diff_check.rc != 0
+      register: helm_diff_install
+      changed_when: helm_diff_install.rc == 0
