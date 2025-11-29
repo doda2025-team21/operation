@@ -111,59 +111,125 @@
 
 # STEP 21: NGINX INGRESS
 
-- name: Add ingress-nginx Helm repository
-  kubernetes.core.helm_repository:
-    name: ingress-nginx
-    repo_url: https://kubernetes.github.io/ingress-nginx
+    - name: Add ingress-nginx Helm repository
+      kubernetes.core.helm_repository:
+        name: ingress-nginx
+        repo_url: https://kubernetes.github.io/ingress-nginx
 
-- name: Install Nginx Ingress Controller
-  kubernetes.core.helm:
-    name: ingress-nginx
-    chart_ref: ingress-nginx/ingress-nginx
-    release_namespace: ingress-nginx
-    create_namespace: true
-    values:
-      controller:
-        service:
-          loadBalancerIP: "192.168.56.95"
+    - name: Install Nginx Ingress Controller
+      kubernetes.core.helm:
+        name: ingress-nginx
+        chart_ref: ingress-nginx/ingress-nginx
+        release_namespace: ingress-nginx
+        create_namespace: true
+        values:
+          controller:
+            service:
+              loadBalancerIP: "192.168.56.95"
 
-- name: Wait for ingress controller to become ready
-  kubernetes.core.k8s_wait:
-    namespace: ingress-nginx
-    label_selectors:
-      - app.kubernetes.io/component=controller
-    timeout: 60
+    - name: Wait for ingress controller to become ready
+      kubernetes.core.k8s_wait:
+        namespace: ingress-nginx
+        kind: Pod
+        label_selectors:
+          - app.kubernetes.io/component=controller
+        timeout: 60
 
 
 # STEP 22: KUBERNETES DASHBOARD
 
-- name: Add Kubernetes Dashboard Helm repository
-  kubernetes.core.helm_repository:
-    name: kubernetes-dashboard
-    repo_url: https://kubernetes.github.io/dashboard/
+    - name: Add Kubernetes Dashboard Helm repository
+      kubernetes.core.helm_repository:
+        name: kubernetes-dashboard
+        repo_url: https://kubernetes.github.io/dashboard/
 
-- name: Install Kubernetes Dashboard
-  kubernetes.core.helm:
-    name: kubernetes-dashboard
-    chart_ref: kubernetes-dashboard/kubernetes-dashboard
-    release_namespace: kubernetes-dashboard
-    create_namespace: true
-    values:
-      protocolHttp: true
+    - name: Install Kubernetes Dashboard
+      kubernetes.core.helm:
+        name: kubernetes-dashboard
+        chart_ref: kubernetes-dashboard/kubernetes-dashboard
+        release_namespace: kubernetes-dashboard
+        create_namespace: true
 
-- name: Create Dashboard admin user
-  kubernetes.core.k8s:
-    state: present
-    src: files/dashboard-admin-user.yml
+    - name: Create Dashboard admin user
+      kubernetes.core.k8s:
+        state: present
+        src: files/dashboard-admin-user.yml
 
-- name: Deploy Dashboard Ingress
-  kubernetes.core.k8s:
-    state: present
-    src: files/dashboard-ingress.yml
+    - name: Deploy Dashboard Ingress
+      kubernetes.core.k8s:
+        state: present
+        src: files/dashboard-ingress.yml
 
-- name: Wait for Kubernetes Dashboard pods
-  kubernetes.core.k8s_wait:
-    namespace: kubernetes-dashboard
-    label_selectors:
-      - k8s-app=kubernetes-dashboard
-    timeout: 60
+    - name: Wait for Kubernetes Dashboard pods
+      kubernetes.core.k8s_wait:
+        namespace: kubernetes-dashboard
+        kind: Pod
+        label_selectors:
+          - k8s-app=kubernetes-dashboard
+        timeout: 60
+
+# STEP 23: ISTIO
+
+    - name: Ensure /home/vagrant exists for Istio download
+      ansible.builtin.file:
+        path: /home/vagrant
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: Download Istio 1.25.2 and unpack as vagrant
+      ansible.builtin.shell: |
+        curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.25.2 sh -
+      args:
+        chdir: /home/vagrant
+        creates: /home/vagrant/istio-1.25.2
+      become_user: vagrant
+
+    - name: Move istioctl to /usr/local/bin
+      ansible.builtin.command: mv /home/vagrant/istio-1.25.2/bin/istioctl /usr/local/bin/istioctl
+      args:
+        creates: /usr/local/bin/istioctl
+      become: true
+
+    - name: Ensure istioctl is executable and owned by vagrant
+      ansible.builtin.file:
+        path: /usr/local/bin/istioctl
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: Check if Istio is already installed
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: istio-system
+        name: istiod
+      register: istio_installed
+
+    - name: Copy istio-config.yml to controller
+      ansible.builtin.copy:
+        src: files/istio-config.yml
+        dest: /home/vagrant/istio-config.yml
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+
+    - name: Install Istio using istioctl
+      ansible.builtin.shell: |
+        istioctl install -y -f /home/vagrant/istio-config.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: istio_install
+      when: istio_installed.resources | length == 0
+
+    - name: Wait for Istio control plane deployments to become available
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=available --timeout=120s deployment --all -n istio-system
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: istio_wait
+      retries: 6
+      delay: 10
+      until: istio_wait.rc == 0
