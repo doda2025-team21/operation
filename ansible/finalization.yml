@@ -50,6 +50,18 @@
       delay: 10
       until: metallb_wait.rc == 0
 
+    - name: Wait for MetalLB webhook service endpoints
+      ansible.builtin.shell: |
+        kubectl -n metallb-system get endpoints metallb-webhook-service -o jsonpath='{.subsets[0].addresses[0].ip}'
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: metallb_webhook_ep
+      retries: 6
+      delay: 10
+      until: metallb_webhook_ep.stdout != ""
+      changed_when: false
+
     - name: Create MetalLB IPAddressPool
       ansible.builtin.copy:
         dest: /tmp/metallb/ipaddresspool.yml
@@ -71,6 +83,9 @@
       environment:
         KUBECONFIG: /home/vagrant/.kube/config
       register: pool_apply
+      retries: 3
+      delay: 10
+      until: pool_apply.rc == 0
       changed_when: "'created' in pool_apply.stdout or 'configured' in pool_apply.stdout"
 
     - name: Create MetalLB L2Advertisement
@@ -108,4 +123,3 @@
     - name: Display MetalLB pods status
       ansible.builtin.debug:
         var: metallb_pods.stdout_lines
-
