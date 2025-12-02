@@ -133,8 +133,8 @@ Deploy Istio-enabled workloads by labeling namespaces (`kubectl label ns <name> 
 
 # A3: Operate and Monitor Kubernetes
 ## Deploy the stack with Helm
+This will run very long time, might be few minutes or even more ........ :smiling_face_with_tear:
 ```bash
-# This will run very long time ........
 vagrant up --no-provision && \
     ansible-playbook -u vagrant -i inventory.cfg ansible/general.yml && \
     ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml && \
@@ -153,7 +153,5 @@ MetalLB assigns the nginx ingress controller an IP (default 192.168.56.90 from `
 ```bash
 echo "192.168.56.90 sms.local" | sudo tee -a /etc/hosts
 ```
-Then open `http://sms.local/` to reach the frontend; it talks to `model-service` via the cluster service.
-
-Open `sms.local/sms/` to open the SMS Checker web.
+Then open `http://sms.local/` to reach the frontend; it talks to `model-service` via the cluster service. Open `sms.local/sms/` to open the SMS Checker web. (Note, the sms.local service might takes up 1 or 2 minutes to be ready and I don't know why :sweat_smile:).
 
