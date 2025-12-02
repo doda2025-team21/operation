@@ -40,7 +40,6 @@
         owner: vagrant
         group: vagrant
         mode: "0755"
-      when: check_cluster_init.stat.exists
 
     # 0644 means owners have read & write access, groups/others have only read access
     - name: Copy admin.conf into kube config
@@ -51,7 +50,6 @@
         group: vagrant
         mode: "0644"
         remote_src: true
-      when: check_cluster_init.stat.exists
 
     - name: Copy admin.conf to host machine
       ansible.builtin.fetch:
