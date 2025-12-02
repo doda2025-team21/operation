@@ -66,20 +66,94 @@ docker compose down
 
 
 # A2: Provisioning a Kubernetes Cluster
-## TODO, every group member
-put your ssh public key into ansible/files/ssh-keys/, so that you can ssh into virtual machines easily.
-## How to run
-```bash
-git pull # Pull latest content
+Goal: reproducibly provision the Kubernetes base platform described in the A2 brief (Vagrant + VirtualBox + Ansible, Flannel CNI, MetalLB, ingress, dashboard, Istio). The controller lives at 192.168.56.100 and workers start at 192.168.56.101; counts and resources are configurable.
 
-# In operation folder.
-vagrant up # If failed, try do it again
-```
-## Test whether it worked
-Make sure you've addedd your ssh public key. Otherwise, you'll need to input username(vagrant) and password(vagrant).
+## What the automation sets up
+- Vagrant builds one `ctrl` and `NUM_WORKERS` `node-*` hosts on a host-only network (192.168.56.100/101/...); CPU/memory/worker count come from `.env` (`NUM_WORKERS`, `CTRL_CPUS`, `CTRL_MEMORY`, `NODE_CPUS`, `NODE_MEMORY`).
+- `ansible/general.yml` (Steps 4-12): imports team SSH keys from `ansible/files/ssh-keys/*.pub`, disables swap and fstab entries, loads `overlay`/`br_netfilter`, enables IP forwarding sysctls, templates `/etc/hosts` with all nodes, adds the Kubernetes apt repo, installs containerd 1.7.24 + runc 1.1.12 + kubeadm/kubelet/kubectl 1.32.4, writes containerd config (pause 3.10, AppArmor off, `SystemdCgroup=true`), restarts containerd, enables kubelet.
+- `ansible/ctrl.yml` (Steps 13-17): `kubeadm init` with advertise address 192.168.56.100 and pod CIDR 10.244.0.0/16 (idempotent via `/etc/kubernetes/admin.conf` check), copies kubeconfig to `~/.kube` for vagrant and fetches `./kubeconfig` for the host, installs Flannel with `--iface=eth1`, installs Helm and the `helm-diff` plugin.
+- `ansible/node.yml` (Steps 18-19): delegates `kubeadm token create --print-join-command` to the controller and joins each worker if `kubelet.conf` is missing.
+- `ansible/finalization.yml` (Steps 20-23): MetalLB with pool `192.168.56.90-192.168.56.99` and readiness waits; ingress-nginx with class `nginx` and load balancer IP 192.168.56.90; Kubernetes Dashboard via Helm with an ingress on `dashboard.local` (HTTPS backend) and admin ServiceAccount; Istio 1.25.2 with ingress gateway IP 192.168.56.91.
+
+## Preparation
+- Install VirtualBox, Vagrant, and Ansible on the host.
+- Add your public key(s) to `ansible/files/ssh-keys/` so SSH works without passwords.
+- Optional: adjust worker count/resources in `.env` (e.g., `NUM_WORKERS=2 NODE_MEMORY=6144`).
+
+## Bring up the cluster
 ```bash
-# Try these commands
+git pull
+
+# Create VMs and run general/ctrl/node provisioning
+vagrant up --no-provision            # rerun with `vagrant provision` if needed
+
+# Rerun playbooks manually (useful after edits)
+ansible-playbook -u vagrant -i inventory.cfg ansible/general.yml
+ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml
+ansible-playbook -u vagrant -i inventory.cfg ansible/node.yml
+
+# Finish cluster features (MetalLB, ingress, dashboard, Istio)
+ansible-playbook -u vagrant -i inventory.cfg ansible/finalization.yml
+```
+
+## Smoke tests (matches A2 expectations)
+```bash
+# Reach the VMs (if keys are missing, fallback user/password is vagrant/vagrant)
 ssh vagrant@192.168.56.100
 ssh vagrant@192.168.56.101
 ssh vagrant@192.168.56.102
+
+# Check cluster health from host
+KUBECONFIG=./kubeconfig kubectl get nodes -o wide
+KUBECONFIG=./kubeconfig kubectl get pods -A
+
+# Verify load balancers / ingresses
+KUBECONFIG=./kubeconfig kubectl get svc -n metallb-system
+KUBECONFIG=./kubeconfig kubectl get svc -n ingress-nginx ingress-nginx-controller -o wide
+KUBECONFIG=./kubeconfig kubectl get svc -n kubernetes-dashboard
+KUBECONFIG=./kubeconfig kubectl get svc -n istio-system istio-ingressgateway -o wide
 ```
+
+## Accessing the Kubernetes Dashboard (This doesn't work somehow)
+```bash
+# Add host entry on your laptop for ingress IP from MetalLB (default 192.168.56.90)
+echo "192.168.56.90 dashboard.local" | sudo tee -a /etc/hosts
+
+# Create a fresh admin token (run on host, talks to controller VM)
+ssh vagrant@192.168.56.100 "kubectl -n kubernetes-dashboard create token admin-user"
+```
+Open `http://dashboard.local/` and paste the token. Traffic to the dashboard service is proxied via the nginx ingress with `nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"`.
+
+## Using Istio (AI generated, Not sure it's runnable or not)
+```bash
+ssh vagrant@192.168.56.100 "istioctl version"
+KUBECONFIG=./kubeconfig kubectl get svc -n istio-system istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}{"\n"}'
+```
+Deploy Istio-enabled workloads by labeling namespaces (`kubectl label ns <name> istio-injection=enabled`) and routing through the Istio ingress gateway IP (default 192.168.56.91).
+
+# A3: Operate and Monitor Kubernetes
+## Deploy the stack with Helm
+```bash
+# This will run very long time ........
+vagrant up --no-provision && \
+    ansible-playbook -u vagrant -i inventory.cfg ansible/general.yml && \
+    ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml && \
+    ansible-playbook -u vagrant -i inventory.cfg ansible/node.yml && \
+    ansible-playbook -u vagrant -i inventory.cfg ansible/finalization.yml && \
+    helm upgrade --install sms-checker ./sms-checker-helm-chart -f sms-checker-helm-chart/values.yaml --kubeconfig kubeconfig
+```
+Check resources and ingress:
+```bash
+KUBECONFIG=./kubeconfig kubectl get pods,svc,ingress
+KUBECONFIG=./kubeconfig kubectl get svc -n ingress-nginx ingress-nginx-controller -o wide
+```
+
+## Expose ingress to access the app
+MetalLB assigns the nginx ingress controller an IP (default 192.168.56.90 from `finalization.yml`). Point your host name to it:
+```bash
+echo "192.168.56.90 sms.local" | sudo tee -a /etc/hosts
+```
+Then open `http://sms.local/` to reach the frontend; it talks to `model-service` via the cluster service.
+
+Open `sms.local/sms/` to open the SMS Checker web.
+
