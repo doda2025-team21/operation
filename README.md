@@ -131,6 +131,11 @@ KUBECONFIG=./kubeconfig kubectl get svc -n istio-system istio-ingressgateway -o 
 ```
 Deploy Istio-enabled workloads by labeling namespaces (`kubectl label ns <name> istio-injection=enabled`) and routing through the Istio ingress gateway IP (default 192.168.56.91).
 
+## How to clean up
+```bash
+vagrant destroy
+```
+
 # A3: Operate and Monitor Kubernetes
 ## Deploy the stack with Helm
 This will run very long time, might be few minutes or even more ........ :smiling_face_with_tear:
@@ -140,7 +145,12 @@ vagrant up --no-provision && \
     ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml && \
     ansible-playbook -u vagrant -i inventory.cfg ansible/node.yml && \
     ansible-playbook -u vagrant -i inventory.cfg ansible/finalization.yml && \
-    helm upgrade --install sms-checker ./sms-checker-helm-chart -f sms-checker-helm-chart/values.yaml --kubeconfig kubeconfig
+    helm upgrade --install sms-checker ./sms-checker-helm-chart \
+    -f sms-checker-helm-chart/values.yaml \
+    --set app.ingress.hosts.stable=sms.local \
+    --set app.ingress.hosts.preview=sms-preview.local \
+    --set app.ingress.className=nginx \
+    --kubeconfig kubeconfig
 ```
 Check resources and ingress:
 ```bash
@@ -151,7 +161,21 @@ KUBECONFIG=./kubeconfig kubectl get svc -n ingress-nginx ingress-nginx-controlle
 ## Expose ingress to access the app
 MetalLB assigns the nginx ingress controller an IP (default 192.168.56.90 from `finalization.yml`). Point your host name to it:
 ```bash
-echo "192.168.56.90 sms.local" | sudo tee -a /etc/hosts
+# sms.local sms-preview.local are the --set host, change that if you used a different host name
+echo "192.168.56.90 sms.local sms-preview.local" | sudo tee -a /etc/hosts
 ```
 Then open `http://sms.local/` to reach the frontend; it talks to `model-service` via the cluster service. Open `sms.local/sms/` to open the SMS Checker web. (Note, the sms.local service might takes up 1 or 2 minutes to be ready and I don't know why :sweat_smile:).
 
+### Ingress hosts (stable + preview)
+- Stable host: `app.ingress.hosts.stable` (defaults to `sms.local`) drives the main ingress rule.
+- Preview/experiment host: `app.ingress.hosts.preview` (defaults empty). If you set a value (e.g., `sms-preview.local`), the chart renders a second ingress rule to the same service—useful for A4 experiments.
+- Ingress class: `app.ingress.className` defaults to `nginx`; override if your cluster uses a different controller.
+- Point both hostnames to your ingress external IP (MetalLB or Minikube tunnel) via `/etc/hosts` so browsers resolve correctly.
+
+### Minikube note
+If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
+
+## How to clean up
+```bash
+vagrant destroy
+```

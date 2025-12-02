@@ -3,9 +3,9 @@ kind: Ingress
 metadata:
   name: app-ingress
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.app.ingress.className | default "nginx" }}
   rules:
-    - host: "{{ .Values.app.host }}"
+    - host: {{ .Values.app.ingress.hosts.stable | quote }}
       http:
         paths:
           - path: /
@@ -15,3 +15,15 @@ spec:
                 name: {{ .Values.app.name }}
                 port:
                   number: {{ .Values.app.port }}
+    {{- if .Values.app.ingress.hosts.preview }}
+    - host: {{ .Values.app.ingress.hosts.preview | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.app.name }}
+                port:
+                  number: {{ .Values.app.port }}
+    {{- end }}

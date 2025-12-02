@@ -3,7 +3,11 @@ app:
   port: 8080
   image: "ghcr.io/doda2025-team21/app"
   tag: "latest"
-  host: sms.local
+  ingress:
+    className: nginx
+    hosts:
+      stable: sms.local
+      preview: ""  # optional pre-release/experiment host; leave empty to disable
 
 model:
   name: model-service
