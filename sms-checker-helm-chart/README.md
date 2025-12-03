@@ -1,22 +1,49 @@
 # sms-checker Helm chart
 
 ## What it does
-Deploys the app and model services with a single Helm release. Assumes the cluster already has:
-- An ingress controller (default class name `nginx`, configurable).
-- External IP for the ingress service (e.g., MetalLB in Vagrant, `minikube tunnel` in Minikube).
+Deploys the app and model services with a single Helm release.
 
 ## Install
+### set up ingress
+If we're running it in our PC, you need to set up ingress as LoadBalancer. So [`minikube tunnel` can work as expected.](https://minikube.sigs.k8s.io/docs/commands/tunnel/)
 ```bash
-helm upgrade --install sms-checker ./sms-checker-helm-chart \
+helm list -A
+#make sure no ingress-nginx is running
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# make sure service.type = LoadBalancer
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+```
+
+```bash
+helm install sms-checker ./sms-checker-helm-chart \
     -f sms-checker-helm-chart/values.yaml \
-    --set app.ingress.hosts.stable=sms.local \
-    --set app.ingress.hosts.preview=sms-preview.local \
-    --set app.ingress.className=nginx \
-    --kubeconfig kubeconfig
+    --set app.ingress.hosts.preview=sms-preview.local 
+sudo minikube tunnel
 ```
 
 ## Point hosts to your ingress IP
-- Vagrant + MetalLB: `echo "192.168.56.90 sms.local sms-preview.local" | sudo tee -a /etc/hosts`
-- Minikube: `minikube tunnel` then take the ingress controller EXTERNAL-IP and add the same `/etc/hosts` entries.
 
-If you do not need a preview host, set `app.ingress.hosts.preview=""` (the extra rule will be omitted).
+1. `127.0.0.1 sms.local sms-preview.local` put this in /etc/hosts.
+2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takse probably half a minute to work.
+
+# How to delete everything
+```bash
+# delete helm repo
+helm repo list -A
+helm repo remove your_stuff
+
+
+# delete helm 
+helm list -A
+helm uninstall your_stuff
+# or
+helm uninstall your_stuff -n your_namespace
+
+# delete minikube all data
+minikube delele --all -purge
+```

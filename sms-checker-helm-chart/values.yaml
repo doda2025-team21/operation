@@ -3,6 +3,9 @@ app:
   port: 8080
   image: "ghcr.io/doda2025-team21/app"
   tag: "latest"
+  service:
+    type: ClusterIP
+    nodePort: "" # optional; only used when type is NodePort or LoadBalancer
   ingress:
     className: nginx
     hosts:
