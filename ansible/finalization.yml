@@ -50,6 +50,18 @@
       delay: 10
       until: metallb_wait.rc == 0
 
+    - name: Wait for MetalLB webhook service endpoints
+      ansible.builtin.shell: |
+        kubectl -n metallb-system get endpoints metallb-webhook-service -o jsonpath='{.subsets[0].addresses[0].ip}'
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: metallb_webhook_ep
+      retries: 6
+      delay: 10
+      until: metallb_webhook_ep.stdout != ""
+      changed_when: false
+
     - name: Create MetalLB IPAddressPool
       ansible.builtin.copy:
         dest: /tmp/metallb/ipaddresspool.yml
@@ -71,6 +83,9 @@
       environment:
         KUBECONFIG: /home/vagrant/.kube/config
       register: pool_apply
+      retries: 3
+      delay: 10
+      until: pool_apply.rc == 0
       changed_when: "'created' in pool_apply.stdout or 'configured' in pool_apply.stdout"
 
     - name: Create MetalLB L2Advertisement
@@ -109,3 +124,330 @@
       ansible.builtin.debug:
         var: metallb_pods.stdout_lines
 
+    #-----------------------------
+    # Step 21: Install Nginx Ingress Controller
+    #-----------------------------
+
+    - name: Ensure directory for ingress-nginx files exists
+      ansible.builtin.file:
+        path: /tmp/ingress-nginx
+        state: directory
+        mode: '0755'
+
+    - name: Add ingress-nginx Helm repository
+      ansible.builtin.shell: |
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+        helm repo update
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      changed_when: false
+
+    - name: Write ingress-nginx values
+      ansible.builtin.copy:
+        dest: /tmp/ingress-nginx/values.yml
+        content: |
+          controller:
+            ingressClassResource:
+              name: nginx
+              controllerValue: "k8s.io/ingress-nginx"
+            ingressClass: nginx
+            service:
+              loadBalancerIP: 192.168.56.90
+        mode: '0644'
+
+    - name: Install ingress-nginx via Helm
+      ansible.builtin.shell: |
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          --namespace ingress-nginx \
+          --create-namespace \
+          --wait \
+          --timeout 5m \
+          -f /tmp/ingress-nginx/values.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: ingress_install
+      changed_when: "'STATUS: deployed' in ingress_install.stdout or 'has been upgraded' in ingress_install.stdout"
+
+    - name: Wait for ingress-nginx service IP
+      ansible.builtin.shell: |
+        kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: ingress_ip
+      retries: 6
+      delay: 10
+      until: ingress_ip.stdout != ""
+      changed_when: false
+
+    - name: Display ingress-nginx service IP
+      ansible.builtin.debug:
+        var: ingress_ip.stdout
+
+    #-----------------------------
+    # Step 22: Install Kubernetes Dashboard
+    #-----------------------------
+
+    - name: Ensure directory for Kubernetes Dashboard files exists
+      ansible.builtin.file:
+        path: /tmp/kubernetes-dashboard
+        state: directory
+        mode: '0755'
+
+    - name: Add Kubernetes Dashboard Helm repository
+      ansible.builtin.shell: |
+        helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update
+        helm repo update
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      changed_when: false
+
+    - name: Write Kubernetes Dashboard values
+      ansible.builtin.copy:
+        dest: /tmp/kubernetes-dashboard/values.yml
+        content: |
+          protocolHttp: false
+          service:
+            externalPort: 443
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+            hosts:
+              - host: dashboard.local
+                paths:
+                  - path: /
+                    pathType: Prefix
+            tls: []
+          metricsScraper:
+            enabled: true
+        mode: '0644'
+
+    - name: Install Kubernetes Dashboard via Helm
+      ansible.builtin.shell: |
+        helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+          --namespace kubernetes-dashboard \
+          --create-namespace \
+          --wait \
+          --timeout 5m \
+          -f /tmp/kubernetes-dashboard/values.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: dashboard_install
+      changed_when: "'STATUS: deployed' in dashboard_install.stdout or 'has been upgraded' in dashboard_install.stdout"
+
+    - name: Ensure dashboard admin user exists
+      ansible.builtin.copy:
+        dest: /tmp/kubernetes-dashboard/admin-user.yml
+        content: |
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: admin-user
+            namespace: kubernetes-dashboard
+          ---
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRoleBinding
+          metadata:
+            name: admin-user
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: cluster-admin
+          subjects:
+            - kind: ServiceAccount
+              name: admin-user
+              namespace: kubernetes-dashboard
+        mode: '0644'
+
+    - name: Apply dashboard admin user
+      ansible.builtin.shell: |
+        kubectl apply -f /tmp/kubernetes-dashboard/admin-user.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: dashboard_admin_apply
+      changed_when: "'created' in dashboard_admin_apply.stdout or 'configured' in dashboard_admin_apply.stdout"
+
+    - name: Wait for Kubernetes Dashboard deployments to be available
+      ansible.builtin.shell: |
+        kubectl wait -n kubernetes-dashboard \
+          --for=condition=available deployment \
+          -l app.kubernetes.io/instance=kubernetes-dashboard \
+          --timeout=180s
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: dashboard_wait
+      changed_when: false
+
+    - name: Write Kubernetes Dashboard ingress manifest
+      ansible.builtin.copy:
+        dest: /tmp/kubernetes-dashboard/ingress.yml
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: kubernetes-dashboard
+            namespace: kubernetes-dashboard
+            annotations:
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+          spec:
+            ingressClassName: nginx
+            rules:
+              - host: dashboard.local
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: kubernetes-dashboard-kong-proxy
+                          port:
+                            number: 443
+        mode: '0644'
+
+    - name: Apply Kubernetes Dashboard ingress
+      ansible.builtin.shell: |
+        kubectl apply -f /tmp/kubernetes-dashboard/ingress.yml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: dashboard_ingress_apply
+      changed_when: "'created' in dashboard_ingress_apply.stdout or 'configured' in dashboard_ingress_apply.stdout"
+
+    - name: Wait for Kubernetes Dashboard ingress to be admitted
+      ansible.builtin.shell: |
+        kubectl -n kubernetes-dashboard get ingress kubernetes-dashboard -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: dashboard_ingress_ip
+      retries: 8
+      delay: 10
+      until: dashboard_ingress_ip.stdout != ""
+      changed_when: false
+
+    #-----------------------------
+    # Step 23: Install Istio
+    #-----------------------------
+
+    - name: Ensure directory for Istio files exists
+      ansible.builtin.file:
+        path: /tmp/istio
+        state: directory
+        mode: '0755'
+
+    - name: Determine Istio architecture
+      ansible.builtin.set_fact:
+        istio_arch: "{{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}"
+        istio_tarball: "istio-1.25.2-linux-{{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}"
+
+    - name: Download Istio 1.25.2
+      ansible.builtin.get_url:
+        url: "https://github.com/istio/istio/releases/download/1.25.2/{{ istio_tarball }}.tar.gz"
+        dest: "/tmp/istio/{{ istio_tarball }}.tar.gz"
+        mode: '0644'
+
+    - name: Extract Istio 1.25.2
+      ansible.builtin.unarchive:
+        src: "/tmp/istio/{{ istio_tarball }}.tar.gz"
+        dest: /opt
+        remote_src: true
+
+    - name: Ensure Istio directories are accessible
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/istio-1.25.2
+        - /opt/istio-1.25.2/bin
+
+    - name: Ensure istioctl is executable
+      ansible.builtin.file:
+        path: /opt/istio-1.25.2/bin/istioctl
+        mode: '0755'
+        state: file
+
+    - name: Link istioctl into PATH
+      ansible.builtin.file:
+        src: /opt/istio-1.25.2/bin/istioctl
+        dest: /usr/local/bin/istioctl
+        state: link
+        force: true
+        mode: '0755'
+
+    - name: Write IstioOperator config
+      ansible.builtin.copy:
+        dest: /tmp/istio/istio-operator.yaml
+        content: |
+          apiVersion: install.istio.io/v1alpha1
+          kind: IstioOperator
+          metadata:
+            name: default
+            namespace: istio-system
+          spec:
+            profile: default
+            components:
+              ingressGateways:
+                - name: istio-ingressgateway
+                  enabled: true
+                  k8s:
+                    service:
+                      type: LoadBalancer
+                      loadBalancerIP: 192.168.56.91
+        mode: '0644'
+
+    - name: Install Istio control plane
+      ansible.builtin.shell: |
+        istioctl install -y -f /tmp/istio/istio-operator.yaml
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+        PATH: /usr/local/bin:/usr/bin:/bin
+      register: istio_install
+      changed_when: "'Installation complete' in istio_install.stdout or 'installed successfully' in istio_install.stdout"
+
+    - name: Wait for Istio control plane
+      ansible.builtin.shell: |
+        kubectl wait -n istio-system \
+          --for=condition=available deployment/istiod \
+          --timeout=180s
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: istiod_wait
+      changed_when: false
+
+    - name: Wait for Istio ingress gateway
+      ansible.builtin.shell: |
+        kubectl wait -n istio-system \
+          --for=condition=available deployment/istio-ingressgateway \
+          --timeout=180s
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: istio_ingress_wait
+      changed_when: false
+
+    - name: Fetch Istio ingressgateway IP
+      ansible.builtin.shell: |
+        kubectl -n istio-system get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      become_user: vagrant
+      environment:
+        KUBECONFIG: /home/vagrant/.kube/config
+      register: istio_ingress_ip
+      retries: 6
+      delay: 10
+      until: istio_ingress_ip.stdout != ""
+      changed_when: false
+
+    - name: Display Istio ingressgateway IP
+      ansible.builtin.debug:
+        var: istio_ingress_ip.stdout

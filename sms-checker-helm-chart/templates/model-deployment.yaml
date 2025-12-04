@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.model.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.model.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.model.name }}
+    spec:
+      containers:
+        - name: {{ .Values.model.name }}
+          image: "{{ .Values.model.image }}:{{ .Values.model.tag }}"
+          ports:
+            - containerPort: {{ .Values.model.port }}
+          env:
+            - name: MODEL_PORT
+              value: "{{ .Values.model.port }}"
+          volumeMounts:
+            - name: model-output
+              mountPath: /app/output
+      volumes:
+        - name: model-output
+          emptyDir: {}   # hostPath later if needed (Excellent tier)

@@ -40,7 +40,6 @@
         owner: vagrant
         group: vagrant
         mode: "0755"
-      when: check_cluster_init.stat.exists
 
     # 0644 means owners have read & write access, groups/others have only read access
     - name: Copy admin.conf into kube config
@@ -51,7 +50,6 @@
         group: vagrant
         mode: "0644"
         remote_src: true
-      when: check_cluster_init.stat.exists
 
     - name: Copy admin.conf to host machine
       ansible.builtin.fetch:
@@ -71,11 +69,12 @@
         group: vagrant
         mode: '0644'
 
-    - name: Patch Flannel to use eth1 interface
-      ansible.builtin.replace:
+    - name: Ensure Flannel uses eth1 interface
+      ansible.builtin.lineinfile:
         path: /home/vagrant/kube-flannel.yml
-        regexp: '^(\s*)args:\s*$'
-        replace: '\1args:\n\1  - --iface=eth1'
+        insertafter: '^\s*- --kube-subnet-mgr$'
+        line: '        - --iface=eth1'
+        state: present
 
     - name: Apply Flannel manifest
       ansible.builtin.command: kubectl apply -f /home/vagrant/kube-flannel.yml
