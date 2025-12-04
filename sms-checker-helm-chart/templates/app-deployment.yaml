@@ -15,6 +15,7 @@ spec:
       containers:
         - name: {{ .Values.app.name }}
           image: "{{ .Values.app.image }}:{{ .Values.app.tag }}"
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: {{ .Values.app.port }}
           env:

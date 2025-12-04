@@ -45,5 +45,5 @@ helm uninstall your_stuff
 helm uninstall your_stuff -n your_namespace
 
 # delete minikube all data
-minikube delele --all -purge
+minikube delete --all -purge
 ```
