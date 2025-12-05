@@ -6,7 +6,7 @@ ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 
 
-192.168.56.103 ctrl
+192.168.56.100 ctrl
 {% for i in range(1, num_workers + 1) %}
-192.168.56.{{ 103 + i }} node-{{ i }}
+192.168.56.{{ 100 + i }} node-{{ i }}
 {% endfor %}

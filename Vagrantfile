@@ -29,8 +29,8 @@ Vagrant.configure("2") do |config|
 
     # NIC 1: default NAT (for internet access) - created automatically by Vagrant
 
-    # NIC 2: host-only network, fixed IP 192.168.56.103 (Step 2)
-    ctrl.vm.network "private_network", ip: "192.168.56.103"
+    # NIC 2: host-only network, fixed IP 192.168.56.100 (Step 2)
+    ctrl.vm.network "private_network", ip: "192.168.56.100"
 
     ctrl.vm.provider "virtualbox" do |vb|
       vb.name   = "k8s-ctrl"
@@ -48,8 +48,8 @@ Vagrant.configure("2") do |config|
 
       # NIC 1: default NAT
 
-      # NIC 2: host-only, 192.168.56.104+ (Step 2)
-      ip_octet = 103 + i         # node-1 => 104, node-2 => 105, ...
+      # NIC 2: host-only, 192.168.56.101+ (Step 2)
+      ip_octet = 100 + i         # node-1 => 101, node-2 => 102, ...
       node.vm.network "private_network", ip: "192.168.56.#{ip_octet}"
 
       node.vm.provider "virtualbox" do |vb|

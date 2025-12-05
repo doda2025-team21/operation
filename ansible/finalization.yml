@@ -2,7 +2,7 @@
 # ansible/finalization.yml
 # Final cluster setup steps that require a fully functional cluster (Step 20+)
 # Run this after the cluster is initialized with:
-# ansible-playbook -u vagrant -i 192.168.56.103, finalization.yml
+# ansible-playbook -u vagrant -i 192.168.56.100, finalization.yml
 
 - name: Finalize Kubernetes cluster setup
   hosts: ctrl

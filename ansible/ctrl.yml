@@ -21,7 +21,7 @@
     - name: Initialize Kubernetes control plane if not initialized
       ansible.builtin.command: >
         kubeadm init
-        --apiserver-advertise-address=192.168.56.103
+        --apiserver-advertise-address=192.168.56.100
         --node-name ctrl
         --pod-network-cidr=10.244.0.0/16
         --ignore-preflight-errors=NumCPU
