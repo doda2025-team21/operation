@@ -29,7 +29,7 @@ sudo minikube tunnel
 ## Point hosts to your ingress IP
 
 1. `127.0.0.1 sms.local sms-preview.local` put this in /etc/hosts.
-2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takse probably half a minute to work.
+2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takes probably half a minute to work.
 
 ## Prometheus Monitoring
 
