@@ -31,74 +31,47 @@ sudo minikube tunnel
 1. `127.0.0.1 sms.local sms-preview.local` put this in /etc/hosts.
 2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takes probably half a minute to work.
 
-## Prometheus Monitoring
+## Prometheus Monitoring (Local/Minikube)
 
-We are going to use kube-prometheus-stack to install:
+The chart includes kube-prometheus-stack as a subchart for monitoring.
 
-Prometheus → collects metrics
-
-Grafana → lets you view dashboards
-
-Alertmanager → handles alerts
-
-### Firsttime setup: Update Helm dependencies
-
-The monitoring stack is included as a subchart, so we need to pull its dependencies once.
-
+### First-time setup: Update Helm dependencies
 ```bash
 cd sms-checker-helm-chart
 helm dependency update
 cd ..
 ```
-This makes sure Helm has all required charts before installing.
 
 ### Install with monitoring enabled
 ```bash
 helm install sms-checker ./sms-checker-helm-chart \
-    -f sms-checker-helm-chart/values.yaml \
-    --kubeconfig kubeconfig
-```
-This allows SMS Checker app, Prometheus, Grafana and Service monitors to run inside the Kubernetes cluster.
-
-### Access Grafana
-```bash
-# Add to /etc/hosts
-echo "192.168.56.90 grafana.local" | sudo tee -a /etc/hosts
-
-after this, you can open Grafana easily in your browser:http://grafana.local
-# Default credentials: admin / admin
-
-You’ll be asked to change the password on first login.
+    -f sms-checker-helm-chart/values.yaml
+sudo minikube tunnel
 ```
 
-### Access Prometheus 
+### Access Prometheus (via port-forward)
 ```bash
-KUBECONFIG=./kubeconfig kubectl port-forward svc/sms-checker-kube-prometheus-prometheus 9090:9090
+kubectl port-forward svc/sms-checker-kube-prometheus-prometheus 9090:9090
 # Open http://localhost:9090
+```
+
+### Access Grafana (via port-forward)
+```bash
+kubectl port-forward svc/sms-checker-grafana 3000:80
+# Open http://localhost:3000
+# Default credentials: admin / admin
 ```
 
 ### Application Metrics
 
-The app exposes these Prometheus-compatible metrics at `/metrics`:
-
-| Metric | Type | Description |
-|--------|------|-------------|
-| `sms_requests_total` | Counter | Total SMS classification requests (labels: endpoint, status, classification) |
-| `sms_queue_size` | Gauge | Current messages in processing queue (labels: priority) |
-| `sms_classification_duration_seconds` | Histogram | Time to classify SMS messages (labels: model_version, classification) |
-
 See [METRICS.md](./METRICS.md) for documentation of custom metrics.
 
 ### Disable monitoring
-If you don’t want Prometheus and Grafana installed with your chart, you can turn them off in your values.yaml:
-
 ```yaml
-# put the following in values.yaml
+# In values.yaml
 prometheus:
   enabled: false
 ```
-
-This keeps the deployment lightweight, only the application will be installed.
 
 # How to delete everything
 ```bash
