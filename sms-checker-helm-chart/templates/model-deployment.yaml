@@ -11,15 +11,24 @@ spec:
     metadata:
       labels:
         app: {{ .Values.model.name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.model.metricsPort }}"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: {{ .Values.model.name }}
           image: "{{ .Values.model.image }}:{{ .Values.model.tag }}"
           ports:
-            - containerPort: {{ .Values.model.port }}
+            - name: http
+              containerPort: {{ .Values.model.port }}
+            - name: metrics
+              containerPort: {{ .Values.model.metricsPort }}
           env:
             - name: MODEL_PORT
               value: "{{ .Values.model.port }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.model.metricsPort }}"
           volumeMounts:
             - name: model-output
               mountPath: /app/output
