@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  main-dashboard-a3.json: |
+{{ .Files.Get "dashboards/main-dashboard-a3.json" | indent 4 }}
