@@ -39,3 +39,8 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 # Week 3 (Dec 1+)
 - Guotao Gou, I [fixed ingress LoadBalancer problem, finished A2 remaining steps(step 21 to step 23) and add and tested README docs for both helm chart local and VM cluster installation. Add Docs for A2 and A3. Tested helm local installation and VM helml installation. Tested host sms.local, sms-preview.local for local installation and VM installation.](https://github.com/doda2025-team21/operation/pull/18)
+
+- Dibyendu Gupta:
+    - Worked on docker migration and creation of helm-charts
+    - My contributions for this week is alongside Martin's (Guatao Gou) in the PR that we both contributed for [PR for docker migration & Helm-chart](https://github.com/doda2025-team21/operation/pull/18).
+    - I am also currently working on integrating configMaps and secrets as placeholders in helm-chart for an advanced solution. A PR for this branch hasn't been made yet, it should be available sometime this weekend and the activity file will be update!
