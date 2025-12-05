@@ -175,6 +175,67 @@ Then open `http://sms.local/` to reach the frontend; it talks to `model-service`
 ### Minikube note
 If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
 
+## Prometheus Monitoring
+
+The Helm chart includes kube-prometheus-stack which installs:
+- **Prometheus** → collects metrics
+- **Grafana** → view dashboards
+- **ServiceMonitors** → auto-discover app metrics
+
+### Access Grafana
+```bash
+# Add to /etc/hosts
+echo "192.168.56.90 grafana.local" | sudo tee -a /etc/hosts
+```
+Open http://grafana.local in your browser.
+- Default credentials: `admin` / `admin`
+- You'll be asked to change the password on first login.
+
+### Access Prometheus
+```bash
+# Add to /etc/hosts
+echo "192.168.56.90 prometheus.local" | sudo tee -a /etc/hosts
+```
+Open http://prometheus.local in your browser.
+
+### Application Metrics
+
+Both services expose Prometheus-compatible metrics:
+
+**App Service** (port 9090, path `/actuator/prometheus`):
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sms_requests_total` | Counter | Total SMS classification requests (labels: endpoint) |
+| `sms_queue_size` | Gauge | Current messages in processing queue (labels: priority) |
+| `sms_classification_duration_seconds` | Histogram | Time to classify SMS messages (labels: model_version) |
+
+**Model Service** (port 9091, path `/metrics`):
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `model_predictions_total` | Counter | Total predictions made (labels: model_name, prediction, confidence_bucket) |
+| `model_loaded` | Gauge | Whether model is ready (1=yes, 0=no) |
+| `model_inference_duration_seconds` | Histogram | Model inference time (labels: model_name) |
+
+See [METRICS.md](./sms-checker-helm-chart/METRICS.md) for detailed documentation.
+
+### Verify Monitoring is Working
+```bash
+# Check ServiceMonitors
+ssh vagrant@192.168.56.103 "kubectl get servicemonitors"
+
+# Check Prometheus targets (should show UP)
+# Open http://prometheus.local → Status → Targets
+```
+
+### Disable Monitoring
+To deploy without Prometheus/Grafana, set in values.yaml:
+```yaml
+prometheus:
+  enabled: false
+```
+
 ## How to clean up
 ```bash
 vagrant destroy
