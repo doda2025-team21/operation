@@ -50,3 +50,11 @@ PR for this week : - https://github.com/doda2025-team21/operation/pull/20
                   
                   - https://github.com/doda2025-team21/model-service/pull/8
                  -   https://github.com/doda2025-team21/app/pull/8
+- Ceylin Ece: I implemented the steps 5-8. For step 5, I used the 'ansible.builtin.shell' module to disable SWAP on the running system. I also removed the SWAP entry from /etc/fstab using the 'ansible.builtin.lineinfile' module. For step 6, I used the 'ansible.builtin.copy' module to add the two modules that are 'overlay' and 'br_netfilter'. Using the 'community.general.modprobe' module, I loaded 'br_netfilter' and 'overlay' in the running system. For step 7, using 'ansible.posix.sysctl', I enabled the properties 'net.ipv4.ip_forward', 'net.bridge.bridge-nf-call-iptables', and 'net.bridge.bridge-nf-call-ip6tables' by setting the value to '1'. For step 8, I implemented the Advanced solution. Please check templates/hosts.j2 in addition to general.yml for this solution. I used the 'ansible.builtin.copy' module and Jinja2 loop for this step. 
+
+- Guotao Gou, I [fixed ingress LoadBalancer problem, finished A2 remaining steps(step 21 to step 23) and add and tested README docs for both helm chart local and VM cluster installation. Add Docs for A2 and A3. Tested helm local installation and VM helml installation. Tested host sms.local, sms-preview.local for local installation and VM installation.](https://github.com/doda2025-team21/operation/pull/18)
+
+- Dibyendu Gupta:
+    - Worked on docker migration and creation of helm-charts
+    - My contributions for this week is alongside Martin's (Guatao Gou) in the PR that we both contributed for [PR for docker migration & Helm-chart](https://github.com/doda2025-team21/operation/pull/18).
+    - I am also currently working on integrating configMaps and secrets as placeholders in helm-chart for an advanced solution. A PR for this branch hasn't been made yet, it should be available sometime this weekend and the activity file will be update!
