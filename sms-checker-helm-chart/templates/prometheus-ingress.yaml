@@ -15,7 +15,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ .Release.Name }}-kube-prometheus-prometheus
+                name: {{ .Release.Name }}-kube-prometheu-prometheus
                 port:
                   number: 9090
 {{- end }}
