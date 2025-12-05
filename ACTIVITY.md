@@ -19,7 +19,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 - Ashraf El Attachi: I mostly spent my time working on F4; multi-architecture images. For this I created a yml file, which creates a github workflow that creates releases viable for multiple architectures.
 
-- Ceylin Ece: I worked on F5 and F6. For F5, I implemented multi-stage builds on the Dockerfile of the 'model-service' repository. The final image size decreased from 933 MB to 659 MB. For F6, I made ports and URLs configurable via ENV variables with default values. 
+- Ceylin Ece: I worked on F5 and F6. For F5, I implemented multi-stage builds on the Dockerfile of the 'model-service' repository. The final image size decreased from 933 MB to 659 MB. For F6, I made ports and URLs configurable via ENV variables with default values. My PR of this week is: https://github.com/doda2025-team21/operation/pull/5 
 
 # Week 2 (Nov 24+)
 - Guotao Gou, [finished step 1 to 4](https://github.com/doda2025-team21/operation/pull/8).
