@@ -12,13 +12,14 @@ spec:
       app: {{ .Values.app.name }}
   endpoints:
     - port: metrics
-      path: /metrics
+      path: /actuator/prometheus
       interval: {{ .Values.prometheus.scrapeInterval | default "15s" }}
       scrapeTimeout: {{ .Values.prometheus.scrapeTimeout | default "10s" }}
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}
 {{- end }}
+
 
 
 
