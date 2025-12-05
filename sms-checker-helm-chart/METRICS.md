@@ -1,4 +1,5 @@
 # Application Metrics
+# AI used to write the following readme
 
 Prometheus scrapes metrics from:
 - `app` on port 9090
@@ -140,7 +141,7 @@ echo "192.168.56.90 prometheus.local grafana.local" | sudo tee -a /etc/hosts
 ```
 
 - Prometheus: http://prometheus.local
-- Grafana: http://grafana.local (admin/admin)
+- Grafana: http://grafana.local (admin/admin) -> You just need to change the password once when you access it for the first time
 
 ---
 
