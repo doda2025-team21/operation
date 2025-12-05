@@ -40,16 +40,23 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 # Week 3 (Dec 1+)
 
-- Taeyong Kwon: This week I integrated full Prometheus based monitoring across the operation, app, and model-service repositories. In the operation repo, I added the kube-prometheus-stack as a Helm dependency, created ServiceMonitors for both the app and modelservice, added metrics ports to deployments and services, configured Prometheus and Grafana ingresses, updated cluster IPs to the 192.168.56.103/104/105 range because .100 was unreachable, and fixed the Prometheus ingress service name. In the app repository, I added micrometer and prometheus dependencies to the pom.xml, implemented custom Counter, Gauge, and Timer metrics in the FrontendController, and enabled spring actuator on port 9090 to expose /actuator/prometheus. In the model-service repository, I added prometheus_client to requirements.txt, implemented Counter, Gauge, and Histogram metrics in serve_model.py, and exposed the /metrics endpoint on port 9091. With these changes I have completed the fully instrumented all services and enabled end-to-end scraping and dashboarding through Prometheus and Grafana.
-- I also fixed ServiceMonitor path for app, fixed deployment rebuilt and pushed Docker images and forced image pull in kubernetes.
+- Taeyong Kwon:
+    - This week, I integrated full Prometheus-based monitoring across the operation, app, and model-service repositories.
+    - In the operation repo, I added kube-prometheus-stack as a Helm dependency and created ServiceMonitors for both the app and model-service.
+    - I added metrics ports to the relevant Deployments and Services.
+    - I configured Prometheus and Grafana ingresses,and fixed the Prometheus ingress service name.
+    - I also fixed the ServiceMonitor path for the app, rebuilt and pushed updated Docker images, and forced Kubernetes to pull the latest images(since it was using the local cache and not updating the metrics)
+    - In the app repo, I added Micrometer + Prometheus dependencies in pom.xml, implemented custom Counter, Gauge, and Timer metrics in FrontendController, and enabled Spring Actuator on port 9090 to expose /actuator/prometheus.
+    - In the model-service repo, I added prometheus_client to requirements.txt, implemented Counter, Gauge, and Histogram metrics in serve_model.py, and exposed /metrics on port 9091.
+    - With these changes, I fully instrumented all services and enabled end-to-end scraping and dashboarding via Prometheus and Grafana.
+    - This completes the “Monitoring” part of the W3 assignment.
 
-- By this I have completed the " Monitoring" part from the W3 assignment.
+    -My PRs for this week:
+    https://github.com/doda2025-team21/operation/pull/20
 
-- 
-PR for this week : - https://github.com/doda2025-team21/operation/pull/20
-                  
-                  - https://github.com/doda2025-team21/model-service/pull/8
-                 -   https://github.com/doda2025-team21/app/pull/8
+    https://github.com/doda2025-team21/model-service/pull/8
+
+    https://github.com/doda2025-team21/app/pull/8
 
 - Ceylin Ece:  
     - I implemented the Grafana part of the assignment. Currently, our "enable monitoring" step is not fully completed yet, so we are using placeholder metrics. If my PR is not merged yet, you can switch to the "grafana" branch and run it. I implemented it in a way that it is not required to manually import the dashboard, I provided a ConfigMap, which is "grafana-a3.yaml" under "templates." 
