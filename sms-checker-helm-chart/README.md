@@ -33,14 +33,24 @@ sudo minikube tunnel
 
 ## Prometheus Monitoring
 
-The following shows how Prometheus monitoring is done via the kube-prometheus-stack subchart.
+We are going to use kube-prometheus-stack to install:
+
+Prometheus → collects metrics
+
+Grafana → lets you view dashboards
+
+Alertmanager → handles alerts
 
 ### Firsttime setup: Update Helm dependencies
+
+The monitoring stack is included as a subchart, so we need to pull its dependencies once.
+
 ```bash
 cd sms-checker-helm-chart
 helm dependency update
 cd ..
 ```
+This makes sure Helm has all required charts before installing.
 
 ### Install with monitoring enabled
 ```bash
@@ -48,14 +58,17 @@ helm install sms-checker ./sms-checker-helm-chart \
     -f sms-checker-helm-chart/values.yaml \
     --kubeconfig kubeconfig
 ```
+This allows SMS Checker app, Prometheus, Grafana and Service monitors to run inside the Kubernetes cluster.
 
 ### Access Grafana
 ```bash
 # Add to /etc/hosts
 echo "192.168.56.90 grafana.local" | sudo tee -a /etc/hosts
 
-# Open http://grafana.local
+after this, you can open Grafana easily in your browser:http://grafana.local
 # Default credentials: admin / admin
+
+You’ll be asked to change the password on first login.
 ```
 
 ### Access Prometheus 
@@ -66,7 +79,7 @@ KUBECONFIG=./kubeconfig kubectl port-forward svc/sms-checker-kube-prometheus-pro
 
 ### Application Metrics
 
-The app exposes these custom metrics at `/metrics`:
+The app exposes these Prometheus-compatible metrics at `/metrics`:
 
 | Metric | Type | Description |
 |--------|------|-------------|
@@ -77,11 +90,15 @@ The app exposes these custom metrics at `/metrics`:
 See [METRICS.md](./METRICS.md) for documentation of custom metrics.
 
 ### Disable monitoring
+If you don’t want Prometheus and Grafana installed with your chart, you can turn them off in your values.yaml:
+
 ```yaml
 # put the following in values.yaml
 prometheus:
   enabled: false
 ```
+
+This keeps the deployment lightweight, only the application will be installed.
 
 # How to delete everything
 ```bash
@@ -89,13 +106,8 @@ prometheus:
 helm repo list -A
 helm repo remove your_stuff
 
-
 # delete helm 
 helm list -A
 helm uninstall your_stuff
-# or
-helm uninstall your_stuff -n your_namespace
 
-# delete minikube all data
-minikube delete --all -purge
 ```
