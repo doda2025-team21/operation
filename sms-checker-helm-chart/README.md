@@ -4,8 +4,8 @@
 Deploys the app and model services with a single Helm release.
 
 ## Install
-### set up ingress
-If we're running it in our PC, you need to set up ingress as LoadBalancer. So [`minikube tunnel` can work as expected.](https://minikube.sigs.k8s.io/docs/commands/tunnel/)
+### 1. Set up ingress as a load-balancer
+If we're running it in our PC, you need to set up ingress as LoadBalancer. So [`minikube tunnel` can work as expected.](https://minikube.sigs.k8s.io/docs/commands/tunnel/) These commands ensure Deployments, Services, Ingress, and Helm installation all work.
 ```bash
 helm list -A
 #make sure no ingress-nginx is running
@@ -18,18 +18,28 @@ helm install ingress-nginx ingress-nginx/ingress-nginx \
   --create-namespace \
   --set controller.service.type=LoadBalancer
 ```
-
+### 2. Install the helm-chart
+Specify special values (if required). Other values from `values.yml` can also be set using an unified command (ex: model.port, app.port, etc.). Have a look at the `values.yml` file to understand the variable naming convention and structure. 
 ```bash
 helm install sms-checker ./sms-checker-helm-chart \
-    -f sms-checker-helm-chart/values.yaml \
-    --set app.ingress.hosts.preview=sms-preview.local 
-sudo minikube tunnel
+  -f sms-checker-helm-chart/values.yaml \
+  --set app.ingress.hosts.stable=sms.local \
+  --set app.ingress.hosts.preview=sms-preview.local
+```
+
+### 3. Start Tunnel
+Even though the rubric specifically mentions to *NOT* use a service tunnel, you cannot avoid `minikube tunnel` when using Minikube, if your Service type is LoadBalancer. Minikube is not a real multi-node cluster, so it has no real LoadBalancer, and must fake one via a tunnel.
+
+```bash
+(sudo) minikube tunnel
 ```
 
 ## Point hosts to your ingress IP
 
 1. `127.0.0.1 sms.local sms-preview.local` put this in /etc/hosts.
-2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takse probably half a minute to work.
+2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). 
+
+(First load may take ~30 seconds.)
 
 # How to delete everything
 ```bash
