@@ -1,6 +1,7 @@
 app:
   name: app
   port: 8080
+  metricsPort: 9090  # Prometheus metrics endpoint
   image: "ghcr.io/doda2025-team21/app"
   tag: "latest"
   service:
@@ -15,5 +16,54 @@ app:
 model:
   name: model-service
   port: 8081
+  metricsPort: 9091  # Prometheus metrics endpoint
   image: "ghcr.io/doda2025-team21/model-service"
   tag: "latest"
+
+# Prometheus monitoring configuration
+prometheus:
+  enabled: true
+  scrapeInterval: "15s"
+  scrapeTimeout: "10s"
+
+# kube-prometheus-stack subchart configuration
+kube-prometheus-stack:
+  # Disable components we don't need
+  alertmanager:
+    enabled: false
+  grafana:
+    enabled: true
+    adminPassword: "admin"
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+        - grafana.local
+  prometheus:
+    prometheusSpec:
+      # ServiceMonitor selector - match our app's ServiceMonitors
+      serviceMonitorSelectorNilUsesHelmValues: false
+      serviceMonitorSelector: {}
+      serviceMonitorNamespaceSelector: {}
+      # Resource limits
+      resources:
+        requests:
+          memory: 400Mi
+        limits:
+          memory: 800Mi
+  # Disable default monitors we don't need
+  kubeApiServer:
+    enabled: false
+  kubeControllerManager:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  kubeProxy:
+    enabled: false
+  kubeEtcd:
+    enabled: false
+  # Keep node-exporter for basic node metrics
+  nodeExporter:
+    enabled: true
+  prometheusOperator:
+    enabled: true

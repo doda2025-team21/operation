@@ -2,10 +2,16 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Values.model.name }}
+  labels:
+    app: {{ .Values.model.name }}
 spec:
   selector:
     app: {{ .Values.model.name }}
   ports:
-    - port: {{ .Values.model.port }}
+    - name: http
+      port: {{ .Values.model.port }}
       targetPort: {{ .Values.model.port }}
+    - name: metrics
+      port: {{ .Values.model.metricsPort }}
+      targetPort: {{ .Values.model.metricsPort }}
 
