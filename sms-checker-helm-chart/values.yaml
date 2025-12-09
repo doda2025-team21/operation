@@ -1,22 +1,24 @@
 app:
   name: app
   port: 8080
-  metricsPort: 9090  # Prometheus metrics endpoint
+  metricsPort: 9090
+  replicas: 2
   image: "ghcr.io/doda2025-team21/app"
-  tag: "latest"
+  tag: "0.0.2"      # Stable version tag (use actual available tag from your registry)
+  canaryTag: "0.0.2" # Canary version tag - in production, set to newer version to test
   service:
     type: ClusterIP
-    nodePort: "" # optional; only used when type is NodePort or LoadBalancer
+    nodePort: "" # only used when type is NodePort or LoadBalancer
   ingress:
     className: nginx
     hosts:
       stable: sms.local
-      preview: ""  # optional pre-release/experiment host; leave empty to disable
+      preview: ""  
 
 model:
   name: model-service
   port: 8081
-  metricsPort: 9091  # Prometheus metrics endpoint
+  metricsPort: 9091
   image: "ghcr.io/doda2025-team21/model-service"
   tag: "latest"
 
@@ -28,7 +30,6 @@ prometheus:
 
 # kube-prometheus-stack subchart configuration
 kube-prometheus-stack:
-  # Disable components we don't need
   alertmanager:
     enabled: false
   grafana:
@@ -41,17 +42,14 @@ kube-prometheus-stack:
         - grafana.local
   prometheus:
     prometheusSpec:
-      # ServiceMonitor selector - match our app's ServiceMonitors
       serviceMonitorSelectorNilUsesHelmValues: false
       serviceMonitorSelector: {}
       serviceMonitorNamespaceSelector: {}
-      # Resource limits
       resources:
         requests:
           memory: 400Mi
         limits:
           memory: 800Mi
-  # Disable default monitors we don't need
   kubeApiServer:
     enabled: false
   kubeControllerManager:
@@ -62,8 +60,35 @@ kube-prometheus-stack:
     enabled: false
   kubeEtcd:
     enabled: false
-  # Keep node-exporter for basic node metrics
   nodeExporter:
     enabled: true
   prometheusOperator:
     enabled: true
+
+# Istio traffic management configuration
+istio:
+  enabled: true
+  # Ingress gateway configuration - make this configurable for other clusters
+  # The selector label value used by the gateway (matches the 'istio' label on the ingress gateway pod)
+  # Default Istio installations use 'ingressgateway' as the label value: istio=ingressgateway
+  ingressGateway:
+    # Selector value for 'istio' label on the ingress gateway pod
+    selector: ingressgateway
+    # Namespace where ingress gateway is deployed
+    namespace: istio-system
+  # Host for accessing the app via Istio
+  host: sms-istio.local
+  # Canary release configuration
+  canary:
+    enabled: true
+    # Percentage of traffic to canary (0-100)
+    weight: 10
+    # Header-based routing for testing
+    headerName: x-canary
+    headerValue: "true"
+  # Sticky session configuration
+  stickySession:
+    enabled: true
+    # Cookie name for session affinity
+    cookieName: "sms-session"
+    ttl: 3600s
