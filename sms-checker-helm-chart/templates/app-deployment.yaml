@@ -23,3 +23,16 @@ spec:
               value: "{{ .Values.app.port }}"
             - name: MODEL_HOST
               value: "http://model-service:{{ .Values.model.port }}"
+            # ---------------------------
+            # CONFIGMAP ENV VARIABLES
+            # ---------------------------
+            - name: WELCOME_MESSAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Values.app.name }}-config"
+                  key: WELCOME_MESSAGE
+            - name: DUMMY_VALUE
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Values.app.name }}-config"
+                  key: DUMMY_VALUE
