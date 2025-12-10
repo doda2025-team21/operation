@@ -37,9 +37,50 @@ Even though the rubric specifically mentions to *NOT* use a service tunnel, you 
 ## Point hosts to your ingress IP
 
 1. `127.0.0.1 sms.local sms-preview.local` put this in /etc/hosts.
-2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). 
 
-(First load may take ~30 seconds.)
+2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takes probably half a minute to work.
+
+## Prometheus Monitoring (Local/Minikube)
+
+The chart includes kube-prometheus-stack as a subchart for monitoring.
+
+### First-time setup: Update Helm dependencies
+```bash
+cd sms-checker-helm-chart
+helm dependency update
+cd ..
+```
+
+### Install with monitoring enabled
+```bash
+helm install sms-checker ./sms-checker-helm-chart \
+    -f sms-checker-helm-chart/values.yaml
+sudo minikube tunnel
+```
+
+### Access Prometheus (via port-forward)
+```bash
+kubectl port-forward svc/sms-checker-kube-prometheus-prometheus 9090:9090
+# Open http://localhost:9090
+```
+
+### Access Grafana (via port-forward)
+```bash
+kubectl port-forward svc/sms-checker-grafana 3000:80
+# Open http://localhost:3000
+# Default credentials: admin / admin
+```
+
+### Application Metrics
+
+See [METRICS.md](./METRICS.md) for documentation of custom metrics.
+
+### Disable monitoring
+```yaml
+# In values.yaml
+prometheus:
+  enabled: false
+```
 
 # How to delete everything
 ```bash
@@ -47,13 +88,8 @@ Even though the rubric specifically mentions to *NOT* use a service tunnel, you 
 helm repo list -A
 helm repo remove your_stuff
 
-
 # delete helm 
 helm list -A
 helm uninstall your_stuff
-# or
-helm uninstall your_stuff -n your_namespace
 
-# delete minikube all data
-minikube delete --all -purge
 ```
