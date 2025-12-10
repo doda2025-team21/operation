@@ -19,6 +19,9 @@ spec:
           ports:
             - containerPort: {{ .Values.app.port }}
           env:
+            # ---------------------------
+            # VALUES ENV VARIABLES (NORMAL)
+            # ---------------------------
             - name: APP_PORT
               value: "{{ .Values.app.port }}"
             - name: MODEL_HOST
@@ -36,3 +39,17 @@ spec:
                 configMapKeyRef:
                   name: "{{ .Values.app.name }}-config"
                   key: DUMMY_VALUE
+            # ---------------------------
+            # SECRET ENV VARIABLES
+            # ---------------------------
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.app.name }}-secret"
+                  key: API_KEY
+
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.app.name }}-secret"
+                  key: PASSWORD

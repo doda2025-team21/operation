@@ -21,3 +21,8 @@ model:
 app-config:
   welcomeMessage: "Hello from ConfigMap!"
   dummyValue: "12345"
+
+app-secret:
+  # these values need to be defined during helm-chart installation through CLI
+  apiKey: "dummy_api_key"
+  password: "dummy_password"
