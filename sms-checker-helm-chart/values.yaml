@@ -18,11 +18,11 @@ model:
   image: "ghcr.io/doda2025-team21/model-service"
   tag: "latest"
 
-app-config:
+appConfig:
   welcomeMessage: "Hello from ConfigMap!"
   dummyValue: "12345"
 
-app-secret:
+appSecret:
   # these values need to be defined during helm-chart installation through CLI
   apiKey: "dummy_api_key"
   password: "dummy_password"
