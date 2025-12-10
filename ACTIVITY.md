@@ -19,7 +19,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 - Ashraf El Attachi: I mostly spent my time working on F4; multi-architecture images. For this I created a yml file, which creates a github workflow that creates releases viable for multiple architectures.
 
-- Ceylin Ece: I worked on F5 and F6. For F5, I implemented multi-stage builds on the Dockerfile of the 'model-service' repository. The final image size decreased from 933 MB to 659 MB. For F6, I made ports and URLs configurable via ENV variables with default values. 
+- Ceylin Ece: I worked on F5 and F6. For F5, I implemented multi-stage builds on the Dockerfile of the 'model-service' repository. The final image size decreased from 933 MB to 659 MB. For F6, I made ports and URLs configurable via ENV variables with default values. My PR of this week is: https://github.com/doda2025-team21/operation/pull/5 
 
 # Week 2 (Nov 24+)
 - Guotao Gou, [finished step 1 to 4](https://github.com/doda2025-team21/operation/pull/8).
@@ -33,6 +33,43 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 - Madhav Chawla: For Steps 21–23, I set up the cluster’s networking and management layers by installing the Nginx Ingress Controller via Helm and assigning it a static MetalLB IP for external routing (Step 21), then deployed the Kubernetes Dashboard using Helm, created an admin ServiceAccount with full cluster access, and exposed the dashboard through an Ingress rule (Step 22). Finally, I installed Istio by copying the Istio distribution into the controller VM, installing istioctl, allowing Istio with a custom operator configuration that assigns the Istio ingress gateway its own static MetalLB IP (Step 23).
 
-- Tae Yong Kwon: I prepared the automation to finish the Kubernetes cluster by adding Helm support, automating worker node joining, and installing MetalLB. For Helm, I added tasks to install the helmdiff plugin. For worker nodes, I used Ansible to generate a single join command on the controller and ensured each worker only joins if it hasn't already, keeping the process idempotent. Finally, I created a separate finalization playbook that installs MetalLB, sets up an IP pool (192.168.56.90–99), configures an L2Advertisementand verifies the deployment once the cluster is fully running (task 17-20)
+- Tae Yong Kwon: I prepared the automation to finish the Kubernetes cluster by adding Helm support, automating worker node joining, and installing MetalLB. For Helm, I added tasks to install the helmdiff plugin. For worker nodes, I used Ansible to generate a single join command on the controller and ensured each worker only joins if it hasn't already, keeping the process idempotent. Finally, I created a separate finalization playbook that installs MetalLB, sets up an IP pool (192.168.56.90–99), configures an L2Advertisementand verifies the deployment once the cluster is fully running (task 17-20). This corresponds to the W2 assignment.
+- PR for this week : https://github.com/doda2025-team21/operation/pull/10
 
-- Ceylin Ece: I implemented the steps 5-8. For step 5, I used the 'ansible.builtin.shell' module to disable SWAP on the running system. I also removed the SWAP entry from /etc/fstab using the 'ansible.builtin.lineinfile' module. For step 6, I used the 'ansible.builtin.copy' module to add the two modules that are 'overlay' and 'br_netfilter'. Using the 'community.general.modprobe' module, I loaded 'br_netfilter' and 'overlay' in the running system. For step 7, using 'ansible.posix.sysctl', I enabled the properties 'net.ipv4.ip_forward', 'net.bridge.bridge-nf-call-iptables', and 'net.bridge.bridge-nf-call-ip6tables' by setting the value to '1'. For step 8, I implemented the Advanced solution. Please check templates/hosts.j2 in addition to general.yml for this solution. I used the 'ansible.builtin.copy' module and Jinja2 loop for this step. 
+- Ceylin Ece: I implemented the steps 5-8. For step 5, I used the 'ansible.builtin.shell' module to disable SWAP on the running system. I also removed the SWAP entry from /etc/fstab using the 'ansible.builtin.lineinfile' module. For step 6, I used the 'ansible.builtin.copy' module to add the two modules that are 'overlay' and 'br_netfilter'. Using the 'community.general.modprobe' module, I loaded 'br_netfilter' and 'overlay' in the running system. For step 7, using 'ansible.posix.sysctl', I enabled the properties 'net.ipv4.ip_forward', 'net.bridge.bridge-nf-call-iptables', and 'net.bridge.bridge-nf-call-ip6tables' by setting the value to '1'. For step 8, I implemented the Advanced solution. Please check templates/hosts.j2 in addition to general.yml for this solution. I used the 'ansible.builtin.copy' module and Jinja2 loop for this step. PR of this week: https://github.com/doda2025-team21/operation/pull/9  
+
+# Week 3 (Dec 1+)
+
+- Taeyong Kwon:
+    - This week, I integrated full Prometheus-based monitoring across the operation, app, and model-service repositories.
+    - In the operation repo, I added kube-prometheus-stack as a Helm dependency and created ServiceMonitors for both the app and model-service.
+    - I added metrics ports to the relevant Deployments and Services.
+    - I configured Prometheus and Grafana ingresses,and fixed the Prometheus ingress service name.
+    - I also fixed the ServiceMonitor path for the app, rebuilt and pushed updated Docker images, and forced Kubernetes to pull the latest images(since it was using the local cache and not updating the metrics)
+    - In the app repo, I added Micrometer + Prometheus dependencies in pom.xml, implemented custom Counter, Gauge, and Timer metrics in FrontendController, and enabled Spring Actuator on port 9090 to expose /actuator/prometheus.
+    - In the model-service repo, I added prometheus_client to requirements.txt, implemented Counter, Gauge, and Histogram metrics in serve_model.py, and exposed /metrics on port 9091.
+    - With these changes, I fully instrumented all services and enabled end-to-end scraping and dashboarding via Prometheus and Grafana.
+    - This completes the “Monitoring” part of the W3 assignment.
+
+    -My PRs for this week:
+    https://github.com/doda2025-team21/operation/pull/20
+
+    https://github.com/doda2025-team21/model-service/pull/8
+
+    https://github.com/doda2025-team21/app/pull/8
+
+- Ceylin Ece:  
+    - I implemented the Grafana part of the assignment. Currently, our "enable monitoring" step is not fully completed yet, so we are using placeholder metrics. If my PR is not merged yet, you can switch to the "grafana" branch and run it. I implemented it in a way that it is not required to manually import the dashboard, I provided a ConfigMap, which is "grafana-a3.yaml" under "templates." 
+    - You can see the JSON files for our dashboards under the "dashboards" directory. 
+    - I implemented various types of visualizations such as: Gauge, Bar Chart, Heatmap, Time series
+    - I also created a placeholder yaml file, for now. It will be removed once the previous steps are completed fully. 
+    - My PR of this week is: https://github.com/doda2025-team21/operation/pull/19 
+    - Please follow the instructions in our README file to run my implementation. 
+
+
+- Guotao Gou, I [fixed ingress LoadBalancer problem, finished A2 remaining steps(step 21 to step 23) and add and tested README docs for both helm chart local and VM cluster installation. Add Docs for A2 and A3. Tested helm local installation and VM helml installation. Tested host sms.local, sms-preview.local for local installation and VM installation.](https://github.com/doda2025-team21/operation/pull/18)
+
+- Dibyendu Gupta:
+    - Worked on docker migration and creation of helm-charts
+    - My contributions for this week is alongside Martin's (Guatao Gou) in the PR that we both contributed for [PR for docker migration & Helm-chart](https://github.com/doda2025-team21/operation/pull/18).
+    - I am also currently working on integrating configMaps and secrets as placeholders in helm-chart for an advanced solution. A PR for this branch hasn't been made yet, it should be available sometime this weekend and the activity file will be update!
