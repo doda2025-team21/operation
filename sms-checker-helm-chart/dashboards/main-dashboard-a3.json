@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 0,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -27,7 +27,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "number of requests to the web application",
+      "description": "Total SMS classification requests (labels: endpoint)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -57,7 +57,6 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -73,7 +72,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -104,21 +103,25 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "num_requests",
+          "expr": "rate(sms_requests_total{endpoint=\"metrics\"}[10m])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "__auto",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "Number of Requests (Counter)",
+      "title": "Total SMS Requests (Counter - Rate(10m))",
       "type": "timeseries"
     },
     {
@@ -126,7 +129,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "converts data points into a range vector",
+      "description": "Total predictions made (labels: model_name, prediction, confidence_bucket)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -156,7 +159,6 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -172,7 +174,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -203,17 +205,21 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
+          "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "rate(num_requests[$__rate_interval])",
+          "expr": "rate(model_predictions_total[10m])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "__auto",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "Request Rate (Counter - Rate)",
+      "title": "Total Model Predictions (Counter - Rate(10m))",
       "type": "timeseries"
     },
     {
@@ -221,7 +227,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "the percentage of requests that land on the index page",
+      "description": "Current messages in processing queue (labels: priority)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -233,7 +239,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -267,17 +273,21 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
+          "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "index_relevance",
+          "expr": "sms_queue_size{priority=\"normal\"}",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "__auto",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "Index Relevance (Gauge)",
+      "title": "SMS Queue Size (Gauge)",
       "type": "gauge"
     },
     {
@@ -285,27 +295,29 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Gauges can be accessed via a timeframe and then need an aggregator function\nfor the range vector. In this example, avg_over_time shows the average",
+      "description": "Whether model is ready (1=yes, 0=no)",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "continuous-RdYlGr"
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
-                "color": "red",
-                "value": 0.8
+                "color": "semi-dark-red",
+                "value": 1
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -331,17 +343,21 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
+          "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg_over_time(my_random[$__interval])",
+          "expr": "model_loaded",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "legendFormat": "__auto",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "My Random (Gauge - Avg over time)",
+      "title": "Model Loaded (Gauge)",
       "type": "gauge"
     },
     {
@@ -349,18 +365,13 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "waiting for the actual metric ",
+      "description": "Time to classify SMS messages (labels: model_version)",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
             "fillOpacity": 80,
             "gradientMode": "none",
             "hideFrom": {
@@ -369,11 +380,9 @@
               "viz": false
             },
             "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+            "stacking": {
+              "group": "A",
+              "mode": "none"
             }
           },
           "mappings": [],
@@ -382,7 +391,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -394,50 +403,135 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 20,
         "x": 0,
         "y": 10
       },
       "id": 3,
       "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
-        "orientation": "auto",
-        "showValue": "auto",
-        "stacking": "none",
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        }
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "editorMode": "code",
-          "expr": "0",
+          "expr": "0\n",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "rate(sms_classification_duration_seconds_max{model_version=\"v1\"}[10m])",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
         }
       ],
-      "title": "Placeholder (Barchart)",
-      "type": "barchart"
+      "title": "SMS Classification Duration Max in Seconds (Histogram)",
+      "type": "histogram"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Model inference time (labels: model_name)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 20,
+        "x": 0,
+        "y": 16
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "avg by() (model_inference_duration_seconds)",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "Model Inference Time (Histogram - Average)",
+      "type": "histogram"
     }
   ],
   "preload": false,
-  "schemaVersion": 42,
+  "schemaVersion": 40,
   "tags": [],
   "templating": {
     "list": []
@@ -450,5 +544,6 @@
   "timezone": "browser",
   "title": "A3 Dashboard 1",
   "uid": "ad9xgq5",
-  "version": 8
+  "version": 1,
+  "weekStart": ""
 }
