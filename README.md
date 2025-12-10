@@ -69,7 +69,7 @@ docker compose down
 Goal: reproducibly provision the Kubernetes base platform described in the A2 brief (Vagrant + VirtualBox + Ansible, Flannel CNI, MetalLB, ingress, dashboard, Istio). The controller lives at 192.168.56.100 and workers start at 192.168.56.101; counts and resources are configurable.
 
 ## What the automation sets up
-- Vagrant builds one `ctrl` and `NUM_WORKERS` `node-*` hosts on a host-only network (192.168.56.100/101/...); CPU/memory/worker count come from `.env` (`NUM_WORKERS`, `CTRL_CPUS`, `CTRL_MEMORY`, `NODE_CPUS`, `NODE_MEMORY`).
+- Vagrant builds one `ctrl` and `NUM_WORKERS` `node-*` hosts on a host-only network (192.168.56.100/104/...); CPU/memory/worker count come from `.env` (`NUM_WORKERS`, `CTRL_CPUS`, `CTRL_MEMORY`, `NODE_CPUS`, `NODE_MEMORY`).
 - `ansible/general.yml` (Steps 4-12): imports team SSH keys from `ansible/files/ssh-keys/*.pub`, disables swap and fstab entries, loads `overlay`/`br_netfilter`, enables IP forwarding sysctls, templates `/etc/hosts` with all nodes, adds the Kubernetes apt repo, installs containerd 1.7.24 + runc 1.1.12 + kubeadm/kubelet/kubectl 1.32.4, writes containerd config (pause 3.10, AppArmor off, `SystemdCgroup=true`), restarts containerd, enables kubelet.
 - `ansible/ctrl.yml` (Steps 13-17): `kubeadm init` with advertise address 192.168.56.100 and pod CIDR 10.244.0.0/16 (idempotent via `/etc/kubernetes/admin.conf` check), copies kubeconfig to `~/.kube` for vagrant and fetches `./kubeconfig` for the host, installs Flannel with `--iface=eth1`, installs Helm and the `helm-diff` plugin.
 - `ansible/node.yml` (Steps 18-19): delegates `kubeadm token create --print-join-command` to the controller and joins each worker if `kubelet.conf` is missing.
@@ -174,6 +174,67 @@ Then open `http://sms.local/` to reach the frontend; it talks to `model-service`
 
 ### Minikube note
 If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
+
+## Prometheus Monitoring
+
+The Helm chart includes kube-prometheus-stack which installs:
+- **Prometheus** → collects metrics
+- **Grafana** → view dashboards
+- **ServiceMonitors** → auto-discover app metrics
+
+### Access Grafana
+```bash
+# Add to /etc/hosts
+echo "192.168.56.90 grafana.local" | sudo tee -a /etc/hosts
+```
+Open http://grafana.local in your browser.
+- Default credentials: `admin` / `admin`
+- You'll be asked to change the password on first login.
+
+### Access Prometheus
+```bash
+# Add to /etc/hosts
+echo "192.168.56.90 prometheus.local" | sudo tee -a /etc/hosts
+```
+Open http://prometheus.local in your browser.
+
+### Application Metrics
+
+Both services expose Prometheus-compatible metrics:
+
+**App Service** (port 9090, path `/actuator/prometheus`):
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sms_requests_total` | Counter | Total SMS classification requests (labels: endpoint) |
+| `sms_queue_size` | Gauge | Current messages in processing queue (labels: priority) |
+| `sms_classification_duration_seconds` | Histogram | Time to classify SMS messages (labels: model_version) |
+
+**Model Service** (port 9091, path `/metrics`):
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `model_predictions_total` | Counter | Total predictions made (labels: model_name, prediction, confidence_bucket) |
+| `model_loaded` | Gauge | Whether model is ready (1=yes, 0=no) |
+| `model_inference_duration_seconds` | Histogram | Model inference time (labels: model_name) |
+
+See [METRICS.md](./sms-checker-helm-chart/METRICS.md) for detailed documentation.
+
+### Verify Monitoring is Working
+```bash
+# Check ServiceMonitors
+ssh vagrant@192.168.56.100 "kubectl get servicemonitors"
+
+# Check Prometheus targets (should show UP)
+# Open http://prometheus.local → Status → Targets
+```
+
+### Disable Monitoring
+To deploy without Prometheus/Grafana, set in values.yaml:
+```yaml
+prometheus:
+  enabled: false
+```
 
 ## How to clean up
 ```bash
