@@ -4,7 +4,7 @@ app:
   metricsPort: 9090
   replicas: 2
   image: "ghcr.io/doda2025-team21/app"
-  tag: "0.0.2"      # Stable version tag (use actual available tag from your registry)
+  tag: "0.2.1"      # Stable version tag (use actual available tag from your registry)
   canaryTag: "0.2.1" # Canary version tag - with new UI design
   service:
     type: ClusterIP
@@ -20,7 +20,7 @@ model:
   port: 8081
   metricsPort: 9091
   image: "ghcr.io/doda2025-team21/model-service"
-  tag: "latest"
+  tag: "1.0.5"
 
 # Prometheus monitoring configuration
 prometheus:
