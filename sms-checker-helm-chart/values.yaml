@@ -18,7 +18,7 @@ model:
   port: 8081
   metricsPort: 9091  # Prometheus metrics endpoint
   image: "ghcr.io/doda2025-team21/model-service"
-  tag: "latest"
+  tag: "1.0.5" # stable version of our image (later ones are not working as intended)
 
 appConfig:
   welcomeMessage: "Hello from ConfigMap!"
