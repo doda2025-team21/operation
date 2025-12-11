@@ -1,7 +1,7 @@
 # Canary release
 ## What's changed
 As shown in the picture, we updated out frontend UI, we changed the background color and modified out input window and button.
-<img width="1321" height="600" alt="Image" src="https://github.com/user-attachments/assets/401dfd05-c130-4e8c-917e-9d133663e907" />
+![UI Comparison](https://github.com/user-attachments/assets/401dfd05-c130-4e8c-917e-9d133663e907)
 
 ## Hypothesis
 Since the new UI looks better than original plain UI, and thus shall satisfy user more.

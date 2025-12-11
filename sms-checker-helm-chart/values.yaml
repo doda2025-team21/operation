@@ -5,7 +5,7 @@ app:
   replicas: 2
   image: "ghcr.io/doda2025-team21/app"
   tag: "0.0.2"      # Stable version tag (use actual available tag from your registry)
-  canaryTag: "0.2.0" # Canary version tag - with new UI design
+  canaryTag: "0.2.1" # Canary version tag - with new UI design
   service:
     type: ClusterIP
     nodePort: "" # only used when type is NodePort or LoadBalancer
