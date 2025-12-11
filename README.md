@@ -69,7 +69,7 @@ docker compose down
 Goal: reproducibly provision the Kubernetes base platform described in the A2 brief (Vagrant + VirtualBox + Ansible, Flannel CNI, MetalLB, ingress, dashboard, Istio). The controller lives at 192.168.56.100 and workers start at 192.168.56.101; counts and resources are configurable.
 
 ## What the automation sets up
-- Vagrant builds one `ctrl` and `NUM_WORKERS` `node-*` hosts on a host-only network (192.168.56.100/104/...); CPU/memory/worker count come from `.env` (`NUM_WORKERS`, `CTRL_CPUS`, `CTRL_MEMORY`, `NODE_CPUS`, `NODE_MEMORY`).
+- Vagrant builds one `ctrl` and `NUM_WORKERS` `node-*` hosts on a host-only network (controller at 192.168.56.100, workers starting at 192.168.56.101/102/...); CPU/memory/worker count come from `.env` (`NUM_WORKERS`, `CTRL_CPUS`, `CTRL_MEMORY`, `NODE_CPUS`, `NODE_MEMORY`).
 - `ansible/general.yml` (Steps 4-12): imports team SSH keys from `ansible/files/ssh-keys/*.pub`, disables swap and fstab entries, loads `overlay`/`br_netfilter`, enables IP forwarding sysctls, templates `/etc/hosts` with all nodes, adds the Kubernetes apt repo, installs containerd 1.7.24 + runc 1.1.12 + kubeadm/kubelet/kubectl 1.32.4, writes containerd config (pause 3.10, AppArmor off, `SystemdCgroup=true`), restarts containerd, enables kubelet.
 - `ansible/ctrl.yml` (Steps 13-17): `kubeadm init` with advertise address 192.168.56.100 and pod CIDR 10.244.0.0/16 (idempotent via `/etc/kubernetes/admin.conf` check), copies kubeconfig to `~/.kube` for vagrant and fetches `./kubeconfig` for the host, installs Flannel with `--iface=eth1`, installs Helm and the `helm-diff` plugin.
 - `ansible/node.yml` (Steps 18-19): delegates `kubeadm token create --print-join-command` to the controller and joins each worker if `kubelet.conf` is missing.
@@ -239,4 +239,285 @@ prometheus:
 ## How to clean up
 ```bash
 vagrant destroy
+```
+
+# A4: Traffic Management with Istio
+
+This section documents the Istio based traffic management configuration for canary releases with sticky sessions. After the explanation, there will be a section where it could be verified.
+
+## Istio Ingress Gateway Configuration
+
+The Istio ingress gateway is provisioned during cluster setup (`ansible/finalization.yml`) and is not a part of the Helm chart, as specified in the assignment description. The gateway runs in the `istio-system` namespace with the following configuration:
+
+### Gateway Labels and Selector
+
+| Component | Label | Value | Description |
+|-----------|-------|-------|-------------|
+| Ingress Gateway Pod | `istio` | `ingressgateway` | Label used by Gateway resources to select the ingress gateway |
+| Ingress Gateway Pod | `app` | `istio-ingressgateway` | Application identifier |
+| Service | External IP | `192.168.56.91` | MetalLB-assigned load balancer IP |
+
+### Configurable Gateway Selector
+
+The ingress gateway selector is configurable in `values.yaml` to support different cluster configurations:
+
+```yaml
+istio:
+  ingressGateway:
+    # Default istio installations use 'ingressgateway'
+    selector: ingressgateway
+    # Below is the namespace where ingress gateway is deployed
+    namespace: istio-system
+```
+
+If deploying to a cluster with a different ingress gateway configuration as mentioned in the assignment, you can override the selector using the following:
+```bash
+helm upgrade --install sms-checker ./sms-checker-helm-chart \
+  --set istio.ingressGateway.selector=my-custom-gateway \
+  --kubeconfig kubeconfig
+```
+
+## Deploy with Istio Traffic Management
+
+### Full Deployment Command
+```bash
+# Deploy with Istio enabled, canary release, and monitoring
+helm upgrade --install sms-checker ./sms-checker-helm-chart \
+  -f sms-checker-helm-chart/values.yaml \
+  --set istio.enabled=true \
+  --set istio.host=sms-istio.local \
+  --set istio.canary.enabled=true \
+  --set istio.canary.weight=10 \
+  --set istio.stickySession.enabled=true \
+  --set prometheus.enabled=true \
+  --kubeconfig kubeconfig
+```
+
+### Add Host Entry
+```bash
+# Point the Istio host to the ingress gateway IP
+echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
+```
+
+## Istio Resources Created
+
+The Helm chart creates the following Istio resources when `istio.enabled=true`.
+The chart deploys three istio objects to be precise, to expose throught the provisioned 
+istio ingressgateway.
+
+### 1. Gateway (`app-gateway`)
+
+It works as a front door for incoming http traffic. It tells the Istio ingress gateway to accept requests for sms-istio.local on port 80 and pass them into the mesh.
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: app-gateway
+spec:
+  selector:
+    istio: ingressgateway  # Configurable via values.yaml
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "sms-istio.local"
+```
+
+### 2. VirtualService (`app-vs`)
+
+
+The virtualservice contains routing rules that supports two following ways of reaching the canary:
+- **force canary (for testing)**: Requests with `x-canary: true` header go to canary 1005.
+- **normal traffic split**: All requests follow the default traffic split (90% stable, 10% canary)
+
+This matches the requirement to demonstrate small percentage of canary release and allowing special requests using special headers.
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: app-vs
+spec:
+  hosts: ["sms-istio.local"]
+  gateways: ["app-gateway"]
+  http:
+    # Explicit canary testing via header
+    - match:
+        - headers:
+            x-canary:
+              exact: "true"
+      route:
+        - destination:
+            host: app
+            subset: canary
+          weight: 100
+    # Default weighted routing
+    - route:
+        - destination:
+            host: app
+            subset: stable
+          weight: 90
+        - destination:
+            host: app
+            subset: canary
+          weight: 10
+```
+
+### 3. DestinationRule (`app-destinationrule`)
+
+It defines two subsets that istio can route to:
+
+**stable** -> pods labelled stable version
+**canary** -> pods labelled canary version
+
+and also enables sticky sessions using http cookie ( so that the same user keeps hitting the same subset)
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: app-destinationrule
+spec:
+  host: app
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        httpCookie:
+          name: sms-session  # Sticky session cookie
+          ttl: 3600s
+  subsets:
+    - name: stable
+      labels:
+        version: stable
+    - name: canary
+      labels:
+        version: canary
+```
+
+## Sticky Sessions
+
+Sticky sessions ensure that once a user is routed to a specific version (stable or canary), they continue to see that version on subsequent requests. This is implemented using consistent hashing with an HTTP cookie.
+
+### How It Works
+1. On first request, Istio routes based on the configured weights (90/10)
+2. Istio sets a cookie (`sms-session`) that identifies the selected subset
+3. Subsequent requests from the same user (with the cookie) are routed to the same subset
+4. Cookie TTL is 3600 seconds (1 hour) by default but we can change this.
+
+### Configuration
+```yaml
+istio:
+  stickySession:
+    enabled: true
+    cookieName: "sms-session"
+    ttl: 3600s
+```
+
+## Testing the Canary release
+
+### Verify Istio Resources
+```bash
+# Check Gateway, VirtualService, and DestinationRule
+KUBECONFIG=./kubeconfig kubectl get gateway,virtualservice,destinationrule
+
+# View detailed configuration
+KUBECONFIG=./kubeconfig kubectl get virtualservice app-vs -o yaml
+KUBECONFIG=./kubeconfig kubectl get destinationrule app-destinationrule -o yaml
+```
+
+### Verify Deployments
+```bash
+# Check both stable and canary deployments are running
+KUBECONFIG=./kubeconfig kubectl get pods -l app=app --show-labels
+
+# Expected output shows pods with version=stable and version=canary labels
+```
+
+### Test Traffic Routing
+
+#### Before testing, make sure you can access the cluster.
+
+ Verify nodes are ready
+KUBECONFIG=./kubeconfig kubectl get nodes
+
+# Verify pods are running
+KUBECONFIG=./kubeconfig kubectl get pods
+
+# Verify Istio resources exist
+KUBECONFIG=./kubeconfig kubectl get gateway,virtualservice,destinationrule
+
+
+#### 1. Normal Request, this demonstrates that the app is accessible through the Istio gateway and virtual services
+```bash
+# Multiple requests will be distributed ~90% stable, ~10% canary
+# First request sets the sticky session cookie
+curl -v -H "Host: sms-istio.local" http://192.168.56.91/sms/
+
+# It should return the http health and show that you are connected to the local app through Istio.
+```
+
+#### 2. Force Canary via Header
+```bash
+# Always routes to canary version
+curl -v -H "Host: sms-istio.local" -H "x-canary: true" http://192.168.56.91/sms/
+```
+
+#### 3. Test Sticky Sessions
+```bash
+# First request - SetCookie header in response
+curl -v -c cookies.txt -H "Host: sms-istio.local" http://192.168.56.91/sms/
+
+# Subsequent requests with cookie - should go to same version
+curl -v -b cookies.txt -H "Host: sms-istio.local" http://192.168.56.91/sms/
+```
+# > Cookie: sms-session="5cc84964593959a8"	Cookie is being sent with the request
+< HTTP/1.1 200 OK	Request succeeded
+< server: istio-envoy	Traffic routed through Istio proxy
+
+Above is the example of sticky session working correctly
+
+
+#### 4. Verify Version in Response
+The app includes an `APP_VERSION` environment variable that can help identify which deployment served the request. Check application logs:
+```bash
+# View logs from stable deployment
+KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=stable
+
+# View logs from canary deployment  
+KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=canary
+```
+
+## How we control the canary rollout
+
+### Image Tags (two versions running)
+The helm chart can deploy stable deployment using 0.0.1, and canary deployment using 0.0.2.
+
+```yaml
+app:
+  tag: "0.0.1"       # Stable version
+  canaryTag: "0.0.2" # Canary version 
+```
+
+### Traffic Weight
+Adjust the percentage of traffic going to canary:
+```yaml
+istio:
+  canary:
+    enabled: true
+    weight: 10  # 10% to canary, 90% to stable
+```
+
+### Progressive Rollout Example (how it can be gradually increased)
+```bash
+# Start with 5% canary
+helm upgrade sms-checker ./sms-checker-helm-chart --set istio.canary.weight=5 --kubeconfig kubeconfig
+
+# Monitor and increase to 25%
+helm upgrade sms-checker ./sms-checker-helm-chart --set istio.canary.weight=25 --kubeconfig kubeconfig
+
+# Full rollout  
+helm upgrade sms-checker ./sms-checker-helm-chart --set app.tag=0.0.2 --set istio.canary.enabled=false --kubeconfig kubeconfig
 ```

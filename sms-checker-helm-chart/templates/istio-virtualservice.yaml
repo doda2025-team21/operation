@@ -1,0 +1,42 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.app.name }}-vs
+spec:
+  hosts:
+    - {{ .Values.istio.host | quote }}
+  gateways:
+    - {{ .Values.app.name }}-gateway
+  http:
+    {{- if .Values.istio.canary.enabled }}
+    # Header based routing for explicit canary testing
+    - match:
+        - headers:
+            {{ .Values.istio.canary.headerName }}:
+              exact: {{ .Values.istio.canary.headerValue | quote }}
+      route:
+        - destination:
+            host: {{ .Values.app.name }}
+            port:
+              number: {{ .Values.app.port }}
+            subset: canary
+          weight: 100
+    {{- end }}
+    # Default routing with canary percentage
+    - route:
+        - destination:
+            host: {{ .Values.app.name }}
+            port:
+              number: {{ .Values.app.port }}
+            subset: stable
+          weight: {{ sub 100 (int .Values.istio.canary.weight) }}
+        {{- if .Values.istio.canary.enabled }}
+        - destination:
+            host: {{ .Values.app.name }}
+            port:
+              number: {{ .Values.app.port }}
+            subset: canary
+          weight: {{ .Values.istio.canary.weight }}
+        {{- end }}
+{{- end }}

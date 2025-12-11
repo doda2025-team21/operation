@@ -1,20 +1,24 @@
+# Stable deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.app.name }}
+  name: "{{ .Values.app.name }}-stable"
 spec:
-  replicas: 1
+  replicas: {{ .Values.app.replicas | default 1 }}
   selector:
     matchLabels:
       app: {{ .Values.app.name }}
+      version: stable
   template:
     metadata:
       labels:
         app: {{ .Values.app.name }}
+        version: stable
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.app.metricsPort }}"
         prometheus.io/path: "/actuator/prometheus"
+        sidecar.istio.io/inject: "true"
     spec:
       containers:
         - name: {{ .Values.app.name }}
@@ -56,9 +60,54 @@ spec:
                 secretKeyRef:
                   name: "{{ .Values.app.name }}-secret"
                   key: API_KEY
-
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.app.name }}-secret"
                   key: PASSWORD
+              value: "http://{{ .Values.model.name }}:{{ .Values.model.port }}"
+            - name: APP_VERSION
+              value: "stable"
+---
+{{- if .Values.istio.canary.enabled }}
+# Canary deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Values.app.name }}-canary"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+      version: canary
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+        version: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.app.metricsPort }}"
+        prometheus.io/path: "/actuator/prometheus"
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image }}:{{ .Values.app.canaryTag | default .Values.app.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.app.port }}
+            - name: metrics
+              containerPort: {{ .Values.app.metricsPort }}
+          env:
+            - name: APP_PORT
+              value: "{{ .Values.app.port }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.app.metricsPort }}"
+            - name: MODEL_HOST
+              value: "http://{{ .Values.model.name }}:{{ .Values.model.port }}"
+            - name: APP_VERSION
+              value: "canary"
+{{- end }}
