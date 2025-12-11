@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Values.app.name }}-config"
+data:
+  WELCOME_MESSAGE: {{ .Values.appConfig.welcomeMessage | quote }}
+  DUMMY_VALUE: {{ .Values.appConfig.dummyValue | quote }}

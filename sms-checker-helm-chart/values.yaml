@@ -22,8 +22,17 @@ model:
   port: 8081
   metricsPort: 9091
   image: "ghcr.io/doda2025-team21/model-service"
-  tag: "1.0.5"
+  tag: "1.0.5" # stable version of our image (later ones are not working as intended)
 
+appConfig:
+  welcomeMessage: "Hello from ConfigMap!"
+  dummyValue: "12345"
+
+appSecret:
+  # these values need to be defined during helm-chart installation through CLI
+  apiKey: "dummy_api_key"
+  password: "dummy_password"
+  
 # Prometheus monitoring configuration
 prometheus:
   enabled: true
