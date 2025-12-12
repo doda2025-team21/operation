@@ -84,6 +84,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - You can find the instructions on how to run/test rate limiting in our README.md file. 
     - For testing purposes I kept the numbers for "max_tokens" and "tokens_per_fill" relatively small. Otherwise, you would need to wait for a long time period to see that it is working. 
     - You can look at "rate-limiting.yaml" and "values.yaml" for my implementation.
+    - I also worked on Grafana again, since we had issues with Prometheus last week, I couldn't properly put our custom metrics, now it works fully, and custom dashboards are automatically added. (It is a3's PR, but I am putting the Grafana PR here again, now it is fully functional https://github.com/doda2025-team21/operation/pull/19 )
  
 - TaeYong Kwon:
     -  I did the "traffic management" part of the A4 Assignment

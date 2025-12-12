@@ -241,6 +241,17 @@ prometheus:
 vagrant destroy
 ```
 
+
+## Displaying Grafana Dashboards
+Since a ConfigMap is provided (sms-checker-helm-chart/templates/grafana-a3.yaml), there is no need for the manual installation. 
+
+There are two separate dashboards, one for A3 and one for the decision process for A4. Their names in Grafana Dashboard list are: A3 Dashboard 1, and A4 Supporting the Decision Process. Once you navigate to the Dashboards in Grafana they should be at the top of the list. 
+
+Open http://grafana.local in your browser.
+
+Go to the Dashboards from the side menu. And you chould be able to see our two dashboards at the top. (A3 Dashboard 1, and A4 Supporting the Decision Process)
+
+
 # A4: Traffic Management with Istio
 
 This section documents the Istio based traffic management configuration for canary releases with sticky sessions. After the explanation, there will be a section where it could be verified.
