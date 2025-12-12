@@ -5,5 +5,4 @@
 *.conf
 kubeconfig
 AGENTS.md
-docs/a*
 docs/feedback.md

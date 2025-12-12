@@ -65,7 +65,6 @@ spec:
                 secretKeyRef:
                   name: "{{ .Values.app.name }}-secret"
                   key: PASSWORD
-              value: "http://{{ .Values.model.name }}:{{ .Values.model.port }}"
             - name: APP_VERSION
               value: "stable"
 ---
