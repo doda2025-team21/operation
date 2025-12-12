@@ -554,7 +554,7 @@ We also implemented a custom response header for visibility purposes.
 response_headers_to_add: 
   - append: false
     header:
-      key: {{ .Values.istio.rateLimiting.headerName }}
+      key: {{ quote .Values.istio.rateLimiting.headerName }}
       value: {{ quote .Values.istio.rateLimiting.headerValue }}
 ```
 Also, our rate limiting is applied to both app and model-service by attaching the filter to the Istio ingress gateway. 

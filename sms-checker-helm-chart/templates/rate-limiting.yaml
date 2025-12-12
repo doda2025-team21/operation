@@ -1,4 +1,4 @@
-{{- if .Values.istio.rateLimiting.enabled }}
+{{- if and .Values.istio.enabled .Values.istio.rateLimiting.enabled }}
 
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -50,7 +50,7 @@ spec:
               response_headers_to_add: 
                 - append: false
                   header:
-                    key: {{ .Values.istio.rateLimiting.headerName }}
+                    key: {{ quote .Values.istio.rateLimiting.headerName }}
                     value: {{ quote .Values.istio.rateLimiting.headerValue }}
 
 {{- end }}
