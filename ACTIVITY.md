@@ -73,3 +73,14 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Worked on docker migration and creation of helm-charts
     - My contributions for this week is alongside Martin's (Guatao Gou) in the PR that we both contributed for [PR for docker migration & Helm-chart](https://github.com/doda2025-team21/operation/pull/18).
     - I am also currently working on integrating configMaps and secrets as placeholders in helm-chart for an advanced solution. A PR for this branch hasn't been made yet, it should be available sometime this weekend and the activity file will be update!
+
+
+# Week 4 (Dec 8+)
+
+- Ceylin Ece: 
+    - I implemented the "Additional Use Case" task this week.
+    - I decided to implement rate limiting. 
+    - The PR of this week is: https://github.com/doda2025-team21/operation/pull/30 
+    - You can find the instructions on how to run/test rate limiting in our README.md file. 
+    - For testing purposes I kept the numbers for "max_tokens" and "tokens_per_fill" relatively small. Otherwise, you would need to wait for a long time period to see that it is working. 
+    - You can look at "rate-limiting.yaml" and "values.yaml" for my implementation.  
