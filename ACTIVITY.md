@@ -73,3 +73,33 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Worked on docker migration and creation of helm-charts
     - My contributions for this week is alongside Martin's (Guatao Gou) in the PR that we both contributed for [PR for docker migration & Helm-chart](https://github.com/doda2025-team21/operation/pull/18).
     - I am also currently working on integrating configMaps and secrets as placeholders in helm-chart for an advanced solution. A PR for this branch hasn't been made yet, it should be available sometime this weekend and the activity file will be update!
+
+
+# Week 4 (Dec 8+)
+
+- Ceylin Ece: 
+    - I implemented the "Additional Use Case" task this week.
+    - I decided to implement rate limiting. 
+    - The PR of this week is: https://github.com/doda2025-team21/operation/pull/30 
+    - You can find the instructions on how to run/test rate limiting in our README.md file. 
+    - For testing purposes I kept the numbers for "max_tokens" and "tokens_per_fill" relatively small. Otherwise, you would need to wait for a long time period to see that it is working. 
+    - You can look at "rate-limiting.yaml" and "values.yaml" for my implementation.
+ 
+- TaeYong Kwon:
+    -  I did the "traffic management" part of the A4 Assignment
+    -  I added new helm templates : istio-gateway.yaml for sms-istio local, istio-virtualservice.yaml for canary based routing and istio- destinationrule.yaml for sticky sessions
+    -  i also split the app deployment into app-stable and app-canary deployments and did the version label for istio routing
+    -  I also fixed problems with monitoring, as some metrics were not working (custom metrics).
+    -  Deployed few releases for app / model-service in order to fix problems with prometheus
+    -  My pr for this week : https://github.com/doda2025-team21/operation/pull/27
+  
+- Guotao Gou, 
+    1. I finished the Continiouse Experiment part.
+        - [Finished the document](https://github.com/doda2025-team21/operation/pull/29) and some [minor update](https://github.com/doda2025-team21/operation/pull/32).
+    2. [Designed the new UI for our app frontend](https://github.com/doda2025-team21/app/pull/9) and [debugging them](https://github.com/doda2025-team21/app/pull/10/files) and [rendering debugging](https://github.com/doda2025-team21/app/pull/10) and [container image and workflow debugging](https://github.com/doda2025-team21/app/pull/11)
+
+- Dibyendu Gupta:
+    - This week I was responsible for implementing [secrets and configMap](https://github.com/doda2025-team21/operation/pull/28) from the previous assignment A3. 
+    - I'm also currently working on "alerting" from the previous assignment (A3) because the person responsible for this has left the course.
+    - Had some issues with running and testing the cluster this week and was sick, so didn't work to a 100% capacity this week. 
+    - Will complete "alerting" from A3 , and work on some tasks from A4 (additional use case) next week.

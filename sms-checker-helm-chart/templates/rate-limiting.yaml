@@ -1,0 +1,56 @@
+{{- if and .Values.istio.enabled .Values.istio.rateLimiting.enabled }}
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: local-rate-limit
+  namespace: {{ .Values.istio.ingressGateway.namespace }}
+spec: 
+# WorkLoadSelector uses a label to match the envoy proxies(pods) on which rate limit actions will apply.
+  workloadSelector:
+    labels: 
+      istio: {{ .Values.istio.ingressGateway.selector }}
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener: 
+          filterChain: 
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+      patch:
+        operation: INSERT_BEFORE
+        value: 
+          name: envoy.filters.http.local_ratelimit
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+            value:
+              stat_prefix: http_local_rate_limiter
+              # token_bucket: This sections has 3 attributes
+              token_bucket:
+                # max_tokens: Specifies the maximum number of tokens in the bucket, 
+                # representing the maximum allowed requests within a certain time frame.
+                max_tokens: {{ .Values.istio.rateLimiting.burstSize }}
+                # tokens_per_fill: Indicates the number of tokens added to the bucket with each fill, 
+                # essentially the rate at which tokens are replenished.
+                tokens_per_fill: {{ .Values.istio.rateLimiting.tokensPerFill }}
+                # fill_interval: Defines the time interval at which the bucket is replenished with tokens.
+                fill_interval: {{ .Values.istio.rateLimiting.fillIntervalSeconds }}s
+              filter_enabled:
+                runtime_key: local_rate_limit_enabled
+                default_value:
+                  numerator: 100
+                  denominator: HUNDRED
+              filter_enforced:
+                runtime_key: local_rate_limit_enforced
+                default_value:
+                  numerator: 100
+                  denominator: HUNDRED
+              response_headers_to_add: 
+                - append: false
+                  header:
+                    key: {{ quote .Values.istio.rateLimiting.headerName }}
+                    value: {{ quote .Values.istio.rateLimiting.headerValue }}
+
+{{- end }}

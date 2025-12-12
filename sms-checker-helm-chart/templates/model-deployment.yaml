@@ -15,6 +15,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.model.metricsPort }}"
         prometheus.io/path: "/metrics"
+        sidecar.istio.io/inject: "true"
     spec:
       containers:
         - name: {{ .Values.model.name }}
