@@ -521,3 +521,82 @@ helm upgrade sms-checker ./sms-checker-helm-chart --set istio.canary.weight=25 -
 # Full rollout  
 helm upgrade sms-checker ./sms-checker-helm-chart --set app.tag=0.0.2 --set istio.canary.enabled=false --kubeconfig kubeconfig
 ```
+
+## Additional Use Case
+### Rate Limiting
+
+```yaml
+name: envoy.filters.http.local_ratelimit
+ typed_config:
+  "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+  type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+  value:
+    stat_prefix: http_local_rate_limiter
+    # token_bucket: This sections has 3 attributes
+    token_bucket:
+      # max_tokens: Specifies the maximum number of tokens in the bucket, 
+      # representing the maximum allowed requests within a certain time frame.
+      max_tokens: {{ .Values.istio.rateLimiting.burstSize }}
+      # tokens_per_fill: Indicates the number of tokens added to the bucket with each fill, 
+      # essentially the rate at which tokens are replenished.
+      tokens_per_fill: {{ .Values.istio.rateLimiting.tokensPerFill }}
+      # fill_interval: Defines the time interval at which the bucket is replenished with tokens.
+      fill_interval: {{ .Values.istio.rateLimiting.fillIntervalSeconds }}s
+```
+
+This configuration allows a burst that is up to 5 requests, and it refills 1 token every 60 seconds.  
+
+When there are more requests, the receive HTTP 429 Too Many Requests. 
+
+We also implemented a custom response header for visibility purposes.
+
+```yaml
+response_headers_to_add: 
+  - append: false
+    header:
+      key: {{ quote .Values.istio.rateLimiting.headerName }}
+      value: {{ quote .Values.istio.rateLimiting.headerValue }}
+```
+Also, our rate limiting is applied to both app and model-service by attaching the filter to the Istio ingress gateway. 
+
+```yaml
+workloadSelector:
+  labels: 
+    istio: {{ .Values.istio.ingressGateway.selector }}
+```
+
+### Check if everything is running
+```bash
+KUBECONFIG=./kubeconfig kubectl -n istio-system get envoyfilter
+```
+
+You should see "local-rate-limit" in the list. 
+
+### Make Istio host resolve to the Istio gateway IP
+
+```bash
+echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
+```
+
+### Testing Rate Limiting
+```bash
+for i in {1..50}; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" http://sms-istio.local/)
+  echo "Request $i: $code"
+done
+```
+
+You should be seeing HTTP 200 for the first ~5 requests
+Afterwards, you should be seeing HTTP 429
+
+In order to inspect,
+```bash
+curl -i http://sms-istio.local/
+```
+
+That should give you:
+```http
+HTTP/1.1 429 Too Many Requests
+x-local-rate-limit: TOO_MANY_REQUESTS
+```
+

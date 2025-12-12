@@ -104,3 +104,13 @@ istio:
     # Cookie name for session affinity
     cookieName: "sms-session"
     ttl: 3600s
+  rateLimiting:
+    enabled: true
+    # number of requests in a burst
+    burstSize: 5
+    # number of tokens to add on each refill
+    tokensPerFill: 1
+    # refill window (seconds)
+    fillIntervalSeconds: 60
+    headerName: x-local-rate-limit
+    headerValue: "TOO_MANY_REQUESTS"
