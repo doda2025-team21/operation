@@ -86,10 +86,10 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - You can look at "rate-limiting.yaml" and "values.yaml" for my implementation.
  
 - TaeYong Kwon:
--  I did the "traffic management" part of the A4 Assignment
--  I added new helm templates : istio-gateway.yaml for sms-istio local, istio-virtualservice.yaml for canary based routing and istio- destinationrule.yaml for sticky sessions
--  i also split the app deployment into app-stable and app-canary deployments and did the version label for istio routing
--  I also fixed problems with monitoring, as some metrics were not working (custom metrics).
--  Deployed few releases for app / model-service in order to fix problems with prometheus
--  My pr for this week : https://github.com/doda2025-team21/operation/pull/27
+    -  I did the "traffic management" part of the A4 Assignment
+    -  I added new helm templates : istio-gateway.yaml for sms-istio local, istio-virtualservice.yaml for canary based routing and istio- destinationrule.yaml for sticky sessions
+    -  i also split the app deployment into app-stable and app-canary deployments and did the version label for istio routing
+    -  I also fixed problems with monitoring, as some metrics were not working (custom metrics).
+    -  Deployed few releases for app / model-service in order to fix problems with prometheus
+    -  My pr for this week : https://github.com/doda2025-team21/operation/pull/27
   
