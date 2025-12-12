@@ -15,11 +15,10 @@
       }
     ]
   },
-  "description": "Placeholder Description => TODO!!",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 25,
   "links": [],
   "panels": [
     {
@@ -84,8 +83,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 10,
+        "h": 7,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -186,9 +185,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 9,
-        "x": 11,
+        "h": 7,
+        "w": 12,
+        "x": 12,
         "y": 0
       },
       "id": 4,
@@ -210,7 +209,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "rate(model_predictions_total[10m])",
+          "expr": "sum by(prediction) (rate(model_predictions_total{model_name=\"spam_classifier\"}[10m]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "__auto",
@@ -242,20 +241,23 @@
                 "value": null
               },
               {
-                "color": "red",
-                "value": 0.8
+                "color": "#EAB839",
+                "value": 5
+              },
+              {
+                "color": "semi-dark-red",
+                "value": 20
               }
             ]
-          },
-          "unit": "percentunit"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 10,
+        "h": 7,
+        "w": 12,
         "x": 0,
-        "y": 5
+        "y": 7
       },
       "id": 2,
       "options": {
@@ -322,10 +324,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 9,
-        "x": 11,
-        "y": 5
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 7
       },
       "id": 5,
       "options": {
@@ -365,24 +367,43 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Time to classify SMS messages (labels: model_version)",
+      "description": "Time to classify SMS messages (labels: model_version)\n\nThis panel shows the average classification time.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "fillOpacity": 80,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
             }
           },
           "mappings": [],
@@ -403,10 +424,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 20,
+        "h": 7,
+        "w": 24,
         "x": 0,
-        "y": 10
+        "y": 14
       },
       "id": 3,
       "options": {
@@ -424,20 +445,13 @@
       "pluginVersion": "11.4.0",
       "targets": [
         {
-          "editorMode": "code",
-          "expr": "0\n",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        },
-        {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "rate(sms_classification_duration_seconds_max{model_version=\"v1\"}[10m])",
+          "editorMode": "code",
+          "expr": "sum(rate(sms_classification_duration_seconds_sum[10m])) / sum(rate(sms_classification_duration_seconds_count[10m]))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": false,
@@ -448,8 +462,8 @@
           "useBackend": false
         }
       ],
-      "title": "SMS Classification Duration Max in Seconds (Histogram)",
-      "type": "histogram"
+      "title": "SMS Classification Duration (Counter - Rate(10m))",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -494,10 +508,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 20,
+        "h": 8,
+        "w": 24,
         "x": 0,
-        "y": 16
+        "y": 21
       },
       "id": 6,
       "options": {
@@ -517,7 +531,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg by() (model_inference_duration_seconds)",
+          "expr": "sum by(le) (rate(model_inference_duration_seconds_bucket{model_name=\"spam_classifier\"}[10m]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "__auto",
@@ -526,7 +540,7 @@
           "useBackend": false
         }
       ],
-      "title": "Model Inference Time (Histogram - Average)",
+      "title": "Model Inference Time (Histogram - Rate(10m))",
       "type": "histogram"
     }
   ],
@@ -537,13 +551,13 @@
     "list": []
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "A3 Dashboard 1",
   "uid": "ad9xgq5",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
