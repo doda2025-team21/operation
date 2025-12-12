@@ -15,4 +15,4 @@ We'll increase percentage our canary deployment gradually.
 
 ## Screenshot of our metrics in Grafana
 
-TODO since currently I can't access the Grafana yet.
+![Screenshot of out metrics in Grafana](https://github.com/user-attachments/assets/a24f0dec-9075-432f-9379-757438586148)
