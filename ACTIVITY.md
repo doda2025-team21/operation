@@ -93,3 +93,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     -  Deployed few releases for app / model-service in order to fix problems with prometheus
     -  My pr for this week : https://github.com/doda2025-team21/operation/pull/27
   
+- Guotao Gou, 
+    1. I finished the Continiouse Experiment part.
+        - [Finished the document](https://github.com/doda2025-team21/operation/pull/29) and some [minor update](https://github.com/doda2025-team21/operation/pull/32).
+    2. [Designed the new UI for our app frontend](https://github.com/doda2025-team21/app/pull/9) and [debugging them](https://github.com/doda2025-team21/app/pull/10/files) and [rendering debugging](https://github.com/doda2025-team21/app/pull/10) and [container image and workflow debugging](https://github.com/doda2025-team21/app/pull/11)
