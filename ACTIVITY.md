@@ -97,3 +97,9 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     1. I finished the Continiouse Experiment part.
         - [Finished the document](https://github.com/doda2025-team21/operation/pull/29) and some [minor update](https://github.com/doda2025-team21/operation/pull/32).
     2. [Designed the new UI for our app frontend](https://github.com/doda2025-team21/app/pull/9) and [debugging them](https://github.com/doda2025-team21/app/pull/10/files) and [rendering debugging](https://github.com/doda2025-team21/app/pull/10) and [container image and workflow debugging](https://github.com/doda2025-team21/app/pull/11)
+
+- Dibyendu Gupta:
+    - This week I was responsible for implementing [secrets and configMap](https://github.com/doda2025-team21/operation/pull/28) from the previous assignment A3. 
+    - I'm also currently working on "alerting" from the previous assignment (A3) because the person responsible for this has left the course.
+    - Had some issues with running and testing the cluster this week and was sick, so didn't work to a 100% capacity this week. 
+    - Will complete "alerting" from A3 , and work on some tasks from A4 (additional use case) next week.
