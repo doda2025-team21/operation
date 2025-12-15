@@ -40,6 +40,9 @@ prometheus:
   scrapeInterval: "15s"
   scrapeTimeout: "10s"
 
+monitoring:
+  prometheusRelease: "myprom"
+
 # kube-prometheus-stack subchart configuration
 kube-prometheus-stack:
   alertmanager:
