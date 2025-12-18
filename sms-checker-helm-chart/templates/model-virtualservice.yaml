@@ -1,0 +1,29 @@
+{{- if .Values.istio.enabled }}
+# VirtualService for model-service - ensures consistent routing (old-old, new-new) as part of the Assignment 4 requiremnet
+# app-stable -> model-service-stable
+# app-canary -> model-service-canary
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.model.name }}-vs
+spec:
+  hosts:
+    - {{ .Values.model.name }}
+  http:
+    {{- if .Values.istio.canary.enabled }}
+    # Route from canary app to canary model
+    - match:
+        - sourceLabels:
+            version: canary
+      route:
+        - destination:
+            host: {{ .Values.model.name }}
+            subset: canary
+    {{- end }}
+    # Default: route from stable app to stable model
+    - route:
+        - destination:
+            host: {{ .Values.model.name }}
+            subset: stable
+{{- end }}
+

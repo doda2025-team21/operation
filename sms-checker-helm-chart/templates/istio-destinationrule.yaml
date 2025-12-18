@@ -1,4 +1,5 @@
 {{- if .Values.istio.enabled }}
+# App DestinationRule
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
@@ -16,6 +17,21 @@ spec:
           name: {{ .Values.istio.stickySession.cookieName }}
           ttl: {{ .Values.istio.stickySession.ttl }}
   {{- end }}
+  subsets:
+    - name: stable
+      labels:
+        version: stable
+    - name: canary
+      labels:
+        version: canary
+---
+# Model Service DestinationRule - ensures consistent routing (old-old, new-new)
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.model.name }}-destinationrule
+spec:
+  host: {{ .Values.model.name }}
   subsets:
     - name: stable
       labels:
