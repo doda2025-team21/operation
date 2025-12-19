@@ -6,6 +6,7 @@ if File.exist?(".env")
   end
 end
 
+# Create an empty inventory.cfg if it does not exist
 unless File.exist?("inventory.cfg")
   File.write("inventory.cfg", "")
 end
@@ -70,7 +71,7 @@ Vagrant.configure("2") do |config|
 
   config.trigger.before :provision do |t|
     t.name = "generating inventory.cfg"
-    t.ruby do |_env, _machine|
+    t.ruby do |env_variable, triggering_machine|
       node_names = ["ctrl"] + (1..NUM_WORKERS).map {|i| "node-#{i}"}
       running = []
       node_names.each do |name|
@@ -107,9 +108,6 @@ Vagrant.configure("2") do |config|
       end
     end 
   end
-
-
-
   #----------------------------------------------------------
   # Ansible provisioning (Step 3 + Step 4)
   #----------------------------------------------------------
