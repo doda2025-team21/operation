@@ -104,3 +104,11 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - I'm also currently working on "alerting" from the previous assignment (A3) because the person responsible for this has left the course.
     - Had some issues with running and testing the cluster this week and was sick, so didn't work to a 100% capacity this week. 
     - Will complete "alerting" from A3 , and work on some tasks from A4 (additional use case) next week.
+
+# Week 5 (Dec +15)
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/34 (This was an improvement on A2)
+    - Our Vagrantfile was not generating 'inventory.cfg.' It was a separate, static file. Therefore, I fixed it. 
+    - I made Vagrantfile generate 'inventory.cfg' automatically and made Ansible use it. 
+    - Our 'inventory.cfg' contains only active nodes. 
