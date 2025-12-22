@@ -87,6 +87,36 @@ git pull
 # Create VMs and run general/ctrl/node provisioning
 vagrant up --no-provision            # rerun with `vagrant provision` if needed
 
+```
+## Inventory generation
+- Our Vagrantfile generates a valid `inventory.cfg` for Ansible that contains all (and only) active nodes. 
+- To avoid potential race conditions, first create VMs as stated in the previous step, and then run provisioning. 
+- Inspect the generated inventory (`inventory.cfg`) by running:
+```bash
+vagrant provision
+```
+## Testing inventory generation
+- To test `inventory.cfg` contains only active nodes:
+  - halt one of the nodes, for instance, in the case that number of workers are adjusted to 3 in the Preparation step (e.g.,`NUM_WORKERS=3`), run:
+
+```bash
+vagrant halt node-3
+vagrant provision
+cat inventory.cfg
+```
+- node-3 should not be visible under [workers].
+- Afterwards:
+
+```bash
+vagrant up node-3
+vagrant provision
+cat inventory.cfg
+```
+- node-3 should now be visible under [workers].
+
+The folowing commands can be used to rerun the playbooks manually. 
+
+```bash 
 # Rerun playbooks manually (useful after edits)
 ansible-playbook -u vagrant -i inventory.cfg ansible/general.yml
 ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml
