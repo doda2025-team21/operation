@@ -119,3 +119,9 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - I added separate stable and canary deployments for the model service with appropriate version labels
     - I introduced Istio VirtualService for model service routing based on source labels
     - I then clarified destinationrule for model service traffic management, because only for app was existing so far.
+
+- Guotao Gou
+    - My PR of the week: https://github.com/doda2025-team21/app/pull/13
+    - Out previous app docker image will run mvn run, and this process will download all dependency files, which makes it very slow.
+    - In my PR, I optimized out app image so it will download the jar file, and just simply run java -jar, so it'll be much faster.
+    - I tested and debuged many times for this app image using github action, resolved the github action authentication and ghcr.io maven privilege problem.
