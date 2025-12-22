@@ -111,4 +111,11 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/34 (This was an improvement on A2)
     - Our Vagrantfile was not generating 'inventory.cfg.' It was a separate, static file. Therefore, I fixed it. 
     - I made Vagrantfile generate 'inventory.cfg' automatically and made Ansible use it. 
-    - Our 'inventory.cfg' contains only active nodes. 
+    - Our 'inventory.cfg' contains only active nodes.
+ 
+- Taeyong Kwon
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
+    - This PR implements canary deployment support for the model service to enable consistent version routing between app and model service deployments (stable-to-stable, canary-to-canary), which is part of the a4 requirement.
+    - I added separate stable and canary deployments for the model service with appropriate version labels
+    - I introduced Istio VirtualService for model service routing based on source labels
+    - I then clarified destinationrule for model service traffic management, because only for app was existing so far.
