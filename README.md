@@ -236,12 +236,6 @@ prometheus:
   enabled: false
 ```
 
-## How to clean up
-```bash
-vagrant destroy
-```
-
-
 ## Displaying Grafana Dashboards
 Since a ConfigMap is provided (sms-checker-helm-chart/templates/grafana-a3.yaml), there is no need for the manual installation. 
 
@@ -250,6 +244,114 @@ There are two separate dashboards, one for A3 and one for the decision process f
 Open http://grafana.local in your browser.
 
 Go to the Dashboards from the side menu. And you chould be able to see our two dashboards at the top. (A3 Dashboard 1, and A4 Supporting the Decision Process)
+
+## How to clean up
+```bash
+vagrant destroy
+```
+
+## Email Alerting using Prometheus
+
+### Installation Pre-requisites
+- Minikube (running with application deployed)
+- Helm
+- istioctl (install istio to your cluster if not installed)
+```yaml
+istioctl install --set profile=demo -y
+kubectl label namespace default istio-injection=enabled
+```
+- Docker (Minikube driver)
+
+### Alert Details
+#### HighRequestRate
+
+**Condition:** More than 15 requests per minute, aggregated across all pods
+
+**Expression:** ``` rate(<request_counter_metric>[1m]) * 60 > 15 ```
+
+**Duration:** Must hold for 2 consecutive minutes
+
+**Severity:** warning
+
+**Notification:** Email (with resolve notification enabled)
+
+### Install/Upgrade the Helm Chart
+```yaml
+helm install sms-checker . \
+  --set alertmanager.smtp.user="YOUR_GMAIL@gmail.com" \
+  --set alertmanager.smtp.password="YOUR_APP_PASSWORD" \
+  --set alertmanager.recipient="YOUR_EMAIL@example.com"
+```
+run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@example.com with your actual email address.
+
+**Note:** Gmail requires an App Password, not your normal account password.
+
+### Verify Setup
+1. Check pods: Ensure the following pods are running:
+    - Prometheus
+    - AlertManager
+    - Grafana
+    - Application pods (app & model-service)
+    ```yaml
+    kubectl get pods
+    ```
+
+2. Verify Alertmanager Config Mount: Look for the following file in the directory: alertmanager.yaml.gz
+    ```yaml
+    kubectl exec -it alertmanager-<pod-name> -- ls /etc/alertmanager/config
+    ```
+
+3. Verify Alert Rule in Prometheus: 
+    ```yaml
+    kubectl port-forward svc/prometheus-operated 9090:9090
+    ```
+    Open: [http://localhost:9090](http://localhost:9090)\
+    Navigate to Status -> Alerts, you should see:
+      ```bash
+      traffic-alerts
+      └── HighRequestRate
+      ```
+      The initial state should be **INACTIVE** (green).
+      ![alt text](docs\sc_traffic_alert.png)
+
+### Testing the alert end-to-end
+1. Port-forward istio ingress: 
+    ```yaml
+    kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80
+    ```
+    Keep this terminal running.
+
+2. Generate Sustained Traffic: Open a new terminal and generate high traffic:
+      ```bash
+      for i in {1..300}; do
+        curl -X POST http://localhost:8080/sms/ \
+          -H "Host: sms-istio.local" \
+          -H "Content-Type: application/json" \
+          -d '{"sms":"alert test"}' >/dev/null
+        sleep 0.3
+      done
+      ```
+
+3. Observe Alert Lifecycle: In Prometheus (Alerts page);
+  
+    | Time    | State   |
+    | ------- | ------- |
+    | < 2 min | Pending |
+    | ≥ 2 min | Firing  |
+
+4. Verify Alertmanager: 
+    ```yaml
+    kubectl port-forward svc/alertmanager-operated 9093:9093
+    ```
+    Open: [http://localhost:9093](http://localhost:9093)\
+    You should see **HighRequestRate** in Firing state.
+
+5. Verify Email Delivery
+    - Alert email is sent when the alert fires
+    - A resolve email is sent after traffic stops
+
+    Check spam folder if not visible.
+
 
 
 # A4: Traffic Management with Istio
