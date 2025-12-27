@@ -45,10 +45,19 @@ prometheus:
 monitoring:
   prometheusRelease: "myprom"
 
+alertmanager:
+  smtp:
+    user: ""
+    password: ""
+  recipient: ""
+
 # kube-prometheus-stack subchart configuration
 kube-prometheus-stack:
   alertmanager:
-    enabled: false
+    enabled: true
+    alertmanagerSpec:
+      useExistingSecret: true
+      configSecret: alertmanager-custom-config
   grafana:
     enabled: true
     adminPassword: "admin"
