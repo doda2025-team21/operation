@@ -3,13 +3,13 @@ kind: PrometheusRule
 metadata:
   name: high-traffic-alert
   labels:
-    release: {{ .Values.monitoring.prometheusRelease }}
+    release: {{ .Release.Name }}
 spec:
   groups:
     - name: traffic-alerts
       rules:
         - alert: HighRequestRate
-          expr: rate(app_requests_total[1m]) * 60 > 15
+          expr: rate(sms_requests_total[1m]) * 60 > 15
           for: 2m
           labels:
             severity: warning
