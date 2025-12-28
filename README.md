@@ -256,10 +256,10 @@ vagrant destroy
 - Minikube (running with application deployed)
 - Helm
 - istioctl (install istio to your cluster if not installed)
-```yaml
-istioctl install --set profile=demo -y
-kubectl label namespace default istio-injection=enabled
-```
+    ```yaml
+    istioctl install --set profile=demo -y
+    kubectl label namespace default istio-injection=enabled
+    ```
 - Docker (Minikube driver)
 
 ### Alert Details
