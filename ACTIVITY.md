@@ -125,3 +125,10 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Out previous app docker image will run mvn run, and this process will download all dependency files, which makes it very slow.
     - In my PR, I optimized out app image so it will download the jar file, and just simply run java -jar, so it'll be much faster.
     - I tested and debuged many times for this app image using github action, resolved the github action authentication and ghcr.io maven privilege problem.
+
+# Week 6 (Jan +5)
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/37 (This is an improvement on A4)
+    - Previously, we only had global-rate-limiting. Now, I have also implemented user-based rate-limiting. 
+    - For the cases that the request is made with a known user ID, then the user-specific rate-limiting will be applied to that user (Look at our README.md file to test it out.)
+    - In the case that there is an unknown user or there are no headers, we fall back to global-rate-limiting. 
