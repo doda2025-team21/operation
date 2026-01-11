@@ -620,14 +620,67 @@ echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
 ```
 
 ### Testing Rate Limiting
+
+User-based rate-limiting is implemented, the user's that we know have the user IDs: 001, 002, and 003. 
+
+In the case that the user ID does not match, we fall back to global rate-limiting. 
+
 ```bash
-for i in {1..50}; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" http://sms-istio.local/)
+echo "waiting just in case"
+sleep 65
+
+# User 1 with user ID: 001
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "001 $i %{http_code}\n" \
+  -H "x-instance-id: 001" \
+  http://sms-istio.local/)
   echo "Request $i: $code"
 done
-```
 
-You should be seeing HTTP 200 for the first ~5 requests
+echo "waiting for refill"
+sleep 65
+
+# User 2 with user ID: 002
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "002 $i %{http_code}\n" \
+  -H "x-instance-id: 002" \
+  http://sms-istio.local/)
+  echo "Request $i: $code"
+done
+
+echo "not waiting for refill, going straight to user 3"
+
+# User 3 with user ID: 003
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "003 $i %{http_code}\n" \
+  -H "x-instance-id: 003" \
+  http://sms-istio.local/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+# Unknown user user with user ID: 777
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "777 $i %{http_code}\n" \
+  -H "x-instance-id: 777" \
+  http://sms-istio.local/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+# User with no header
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "NOHEADER $i %{http_code}\n" \
+  http://sms-istio.local/)
+  echo "Request $i: $code"
+done
+
+```
+You should be seeing HTTP 200 for the first ~10 requests
 Afterwards, you should be seeing HTTP 429
 
 In order to inspect,
