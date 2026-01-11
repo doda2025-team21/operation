@@ -109,7 +109,7 @@ istio:
     # number of requests in a burst
     burstSize: 10
     # number of tokens to add on each refill
-    tokensPerFill: 10
+    tokensPerFill: 2
     # refill window (seconds)
     fillIntervalSeconds: 60
     headerName: x-local-rate-limit
