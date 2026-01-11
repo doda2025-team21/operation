@@ -104,3 +104,24 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - I'm also currently working on "alerting" from the previous assignment (A3) because the person responsible for this has left the course.
     - Had some issues with running and testing the cluster this week and was sick, so didn't work to a 100% capacity this week. 
     - Will complete "alerting" from A3 , and work on some tasks from A4 (additional use case) next week.
+
+# Week 5 (Dec +15)
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/34 (This was an improvement on A2)
+    - Our Vagrantfile was not generating 'inventory.cfg.' It was a separate, static file. Therefore, I fixed it. 
+    - I made Vagrantfile generate 'inventory.cfg' automatically and made Ansible use it. 
+    - Our 'inventory.cfg' contains only active nodes.
+ 
+- Taeyong Kwon
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
+    - This PR implements canary deployment support for the model service to enable consistent version routing between app and model service deployments (stable-to-stable, canary-to-canary), which is part of the a4 requirement.
+    - I added separate stable and canary deployments for the model service with appropriate version labels
+    - I introduced Istio VirtualService for model service routing based on source labels
+    - I then clarified destinationrule for model service traffic management, because only for app was existing so far.
+
+- Guotao Gou
+    - My PR of the week: https://github.com/doda2025-team21/app/pull/13
+    - Out previous app docker image will run mvn run, and this process will download all dependency files, which makes it very slow.
+    - In my PR, I optimized out app image so it will download the jar file, and just simply run java -jar, so it'll be much faster.
+    - I tested and debuged many times for this app image using github action, resolved the github action authentication and ghcr.io maven privilege problem.
