@@ -625,11 +625,13 @@ User-based rate-limiting is implemented, the users that we know have the user ID
 
 In the case that the user ID does not match, we fall back to global rate-limiting. 
 
+For demonstration purposes, we have kept the "tokens_per_fill" relatively low. 
+
 ```bash
 echo "waiting just in case"
-sleep 60
+sleep 65
 
-# User 1 with user ID: 001
+echo User 1 with user ID: 001
 for i in {1..5}; do
   code=$(curl -s -o /dev/null -w "001 $i %{http_code}\n" \
   -H "Host: sms-istio.local" \
@@ -639,9 +641,9 @@ for i in {1..5}; do
 done
 
 echo "waiting for refill"
-sleep 60
+sleep 65
 
-# User 2 with user ID: 002
+echo User 2 with user ID: 002
 for i in {1..7}; do
   code=$(curl -s -o /dev/null -w "002 $i %{http_code}\n" \
   -H "Host: sms-istio.local" \
@@ -651,9 +653,9 @@ for i in {1..7}; do
 done
 
 echo "waiting for refill"
-sleep 60
+sleep 65
 
-# User 3 with user ID: 003
+echo User 3 with user ID: 003
 for i in {1..9}; do
   code=$(curl -s -o /dev/null -w "003 $i %{http_code}\n" \
   -H "Host: sms-istio.local" \
@@ -663,9 +665,9 @@ for i in {1..9}; do
 done
 
 echo "waiting for refill"
-sleep 60
+sleep 65
 
-# Unknown user user with user ID: 777
+echo Unknown user with user ID: 777
 for i in {1..15}; do
   code=$(curl -s -o /dev/null -w "777 $i %{http_code}\n" \
   -H "Host: sms-istio.local" \
@@ -675,9 +677,9 @@ for i in {1..15}; do
 done
 
 echo "waiting for refill"
-sleep 60
+sleep 65
 
-# User with no header
+echo User with no header
 for i in {1..15}; do
   code=$(curl -s -o /dev/null -w "NOHEADER $i %{http_code}\n" \
   -H "Host: sms-istio.local" \
@@ -700,7 +702,9 @@ For user 3:
 
 For unknown user and no header:
 - You should be seeing HTTP 200 until the global limit is reached
-- Afterwards, you should be seeing HTTP 429
+- Afterwards, you should start seeing HTTP 429
+
+It is expected that you will start seeing HTTP 200 after some HTTP 429 responses. The fill interval is 60s, meaning that every minute, the specified amount of tokens (tokens per fill) is added to the token bucket. Since we are sending low numbers of requests with the first three users, the 60s limit is not reached. However, as you can see in the last two users, since we send more requests and more time passes, we start seeing HTTP 200 responses as the tokens are getting refilled. 
 
 
 In order to inspect,
