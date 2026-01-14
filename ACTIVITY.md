@@ -131,4 +131,8 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/37 (This is an improvement on A4)
     - Previously, we only had global-rate-limiting. Now, I have also implemented user-based rate-limiting. 
     - For the cases that the request is made with a known user ID, then the user-specific rate-limiting will be applied to that user (Look at our README.md file to test it out.)
-    - In the case that there is an unknown user or there are no headers, we fall back to global-rate-limiting. 
+    - In the case that there is an unknown user or there are no headers, we fall back to global-rate-limiting.
+ 
+- Taeyong Kwon:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
+    - Made readme to verify the istio, and to observe the traffic distribution between stable and canary version
