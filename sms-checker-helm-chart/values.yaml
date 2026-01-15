@@ -43,13 +43,17 @@ prometheus:
   scrapeTimeout: "10s"
 
 monitoring:
+  enabled: true
+  namespace: "monitoring" 
   prometheusRelease: "myprom"
 
+# AlertManager Configuration
 alertmanager:
+  recipient: ""
   smtp:
     user: ""
     password: ""
-  recipient: ""
+    requireTLS: true
 
 # kube-prometheus-stack subchart configuration
 kube-prometheus-stack:

@@ -2,17 +2,20 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: high-traffic-alert
+  namespace: {{ .Values.monitoring.namespace }}
   labels:
+    prometheus: kube-prometheus
     release: {{ .Release.Name }}
 spec:
   groups:
     - name: traffic-alerts
       rules:
         - alert: HighRequestRate
-          expr: sum(rate(sms_requests_total[1m])) * 60 > 15
-          for: 2m
+          expr: sum(rate(sms_requests_total[1m])) > 15
+          for: 1m
           labels:
             severity: warning
+            namespace: {{ .Values.monitoring.namespace }}
           annotations:
-            summary: "High Request Volume"
-            description: "More than 15 requests/min for over 2 minutes."
+            summary: "High Request Volume on frontend app: SMS"
+            description: "More than 15 requests/min for over 1 minutes."

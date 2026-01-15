@@ -1,36 +1,27 @@
-{{- if .Values.prometheus.enabled }}
-apiVersion: v1
-kind: ConfigMap
+{{- if and .Values.prometheus.enabled .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
 metadata:
-  name: alertmanager-custom-config
-  namespace: {{ .Release.Namespace }}
+  name: alertmanager-config
+  namespace: {{ .Values.monitoring.namespace }} 
   labels:
-    app: kube-prometheus-stack-alertmanager
     release: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-data:
-  alertmanager.yaml: |
-    global:
-      resolve_timeout: 5m
-      smtp_smarthost: "smtp.gmail.com:587"
-      smtp_from: "{{ .Values.alertmanager.smtp.user }}"
-      smtp_auth_username: "{{ .Values.alertmanager.smtp.user }}"
-      smtp_auth_password: "${SMTP_PASSWORD}"
-      smtp_require_tls: true
-
-    route:
-      receiver: "email-notifications"
-      group_by: ["alertname"]
-      group_wait: 10s
-      group_interval: 5m
-      repeat_interval: 1h
-      
-    receivers:
-      - name: "email-notifications"
-        email_configs:
-          - to: "{{ .Values.alertmanager.recipient }}"
-            send_resolved: true
-            headers:
-              Subject: "[ALERT] {{ "{{" }} .GroupLabels.alertname {{ "}}" }} - {{ .Values.app.name }}"
+spec:
+  route:
+    receiver: "alerts-email"
+    groupBy: ["alertname"]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 1h
+  receivers:
+    - name: "alerts-email"
+      emailConfigs:
+        - to: {{ .Values.alertmanager.recipient | quote }}
+          from: {{ .Values.alertmanager.smtp.user | quote }}
+          smarthost: "smtp.gmail.com:587"
+          authUsername: {{ .Values.alertmanager.smtp.user | quote }}
+          authPassword:
+            name: alertmanager-email-secret
+            key: password
+          requireTLS: {{ .Values.alertmanager.smtp.requireTLS }}
 {{- end }}
