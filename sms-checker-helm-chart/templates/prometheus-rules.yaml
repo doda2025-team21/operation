@@ -9,7 +9,7 @@ spec:
     - name: traffic-alerts
       rules:
         - alert: HighRequestRate
-          expr: rate(sms_requests_total[1m]) * 60 > 15
+          expr: sum(rate(sms_requests_total[1m])) * 60 > 15
           for: 2m
           labels:
             severity: warning

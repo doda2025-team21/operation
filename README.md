@@ -285,7 +285,7 @@ vagrant destroy
 ### Installation Pre-requisites
 - Minikube (running with application deployed)
 - Helm
-- istioctl (install istio to your cluster if not installed)
+- istioctl (install istio to your cluster if not installed and enable sidecar injection)
     ```yaml
     istioctl install --set profile=demo -y
     kubectl label namespace default istio-injection=enabled
@@ -326,12 +326,17 @@ run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@ex
     kubectl get pods
     ```
 
-2. Verify Alertmanager Config Mount: Look for the following file in the directory: alertmanager.yaml.gz
+2. Verify existence of alert rule in kubernetes; you're expected to see `high-traffic-alert` rule in the list of rules.
+    ```yaml
+    kubectl get prometheusrules
+    ```
+
+3. Verify Alertmanager Config Mount: Look for the following file in the directory: alertmanager.yaml.gz
     ```yaml
     kubectl exec -it alertmanager-<pod-name> -- ls /etc/alertmanager/config
     ```
 
-3. Verify Alert Rule in Prometheus: 
+4. Verify Alert Rule in Prometheus: 
     ```yaml
     kubectl port-forward svc/prometheus-operated 9090:9090
     ```
@@ -353,12 +358,12 @@ run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@ex
 
 2. Generate Sustained Traffic: Open a new terminal and generate high traffic:
       ```bash
-      for i in {1..300}; do
+      for i in {1..600}; do
         curl -X POST http://localhost:8080/sms/ \
           -H "Host: sms-istio.local" \
           -H "Content-Type: application/json" \
           -d '{"sms":"alert test"}' >/dev/null
-        sleep 0.3
+        sleep 0.1
       done
       ```
 
