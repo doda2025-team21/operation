@@ -5,8 +5,8 @@ app:
   replicas: 2
   image: "ghcr.io/doda2025-team21/app"
 
-  tag: "0.2.6"      # Stable version tag (use actual available tag from your registry)
-  canaryTag: "0.2.4" # Canary version tag - with new UI design
+  tag: "0.2.17"      # Stable version tag (use actual available tag from your registry)
+  canaryTag: "0.2.14" # Canary version tag - with new UI design
 
 
   service:
