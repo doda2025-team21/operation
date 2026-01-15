@@ -87,6 +87,36 @@ git pull
 # Create VMs and run general/ctrl/node provisioning
 vagrant up --no-provision            # rerun with `vagrant provision` if needed
 
+```
+## Inventory generation
+- Our Vagrantfile generates a valid `inventory.cfg` for Ansible that contains all (and only) active nodes. 
+- To avoid potential race conditions, first create VMs as stated in the previous step, and then run provisioning. 
+- Inspect the generated inventory (`inventory.cfg`) by running:
+```bash
+vagrant provision
+```
+## Testing inventory generation
+- To test `inventory.cfg` contains only active nodes:
+  - halt one of the nodes, for instance, in the case that number of workers are adjusted to 3 in the Preparation step (e.g.,`NUM_WORKERS=3`), run:
+
+```bash
+vagrant halt node-3
+vagrant provision
+cat inventory.cfg
+```
+- node-3 should not be visible under [workers].
+- Afterwards:
+
+```bash
+vagrant up node-3
+vagrant provision
+cat inventory.cfg
+```
+- node-3 should now be visible under [workers].
+
+The folowing commands can be used to rerun the playbooks manually. 
+
+```bash 
 # Rerun playbooks manually (useful after edits)
 ansible-playbook -u vagrant -i inventory.cfg ansible/general.yml
 ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml
@@ -692,19 +722,96 @@ echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
 ```
 
 ### Testing Rate Limiting
+
+User-based rate-limiting is implemented, the users that we know have the user IDs: 001, 002, and 003. 
+
+In the case that the user ID does not match, we fall back to global rate-limiting. 
+
+For demonstration purposes, we have kept the "tokens_per_fill" relatively low. 
+
 ```bash
-for i in {1..50}; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" http://sms-istio.local/)
+echo "waiting just in case"
+sleep 65
+
+echo User 1 with user ID: 001
+for i in {1..5}; do
+  code=$(curl -s -o /dev/null -w "001 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 001" \
+  http://sms-istio.local/sms/)
   echo "Request $i: $code"
 done
-```
 
-You should be seeing HTTP 200 for the first ~5 requests
-Afterwards, you should be seeing HTTP 429
+echo "waiting for refill"
+sleep 65
+
+echo User 2 with user ID: 002
+for i in {1..7}; do
+  code=$(curl -s -o /dev/null -w "002 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 002" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+echo User 3 with user ID: 003
+for i in {1..9}; do
+  code=$(curl -s -o /dev/null -w "003 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 003" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+echo Unknown user with user ID: 777
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "777 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 777" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+echo User with no header
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "NOHEADER $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+```
+For user 1:
+- You should be seeing HTTP 200 for the first ~3 requests
+- Afterwards, you should be seeing HTTP 429
+
+For user 2:
+- You should be seeing HTTP 200 for the first ~5 requests
+- Afterwards, you should be seeing HTTP 429
+
+For user 3:
+- You should be seeing HTTP 200 for the first ~7 requests
+- Afterwards, you should be seeing HTTP 429
+
+For unknown user and no header:
+- You should be seeing HTTP 200 until the global limit is reached
+- Afterwards, you should start seeing HTTP 429
+
+It is expected that you will start seeing HTTP 200 after some HTTP 429 responses. The fill interval is 60s, meaning that every minute, the specified amount of tokens (tokens per fill) is added to the token bucket. Since we are sending low numbers of requests with the first three users, the 60s limit is not reached. However, as you can see in the last two users, since we send more requests and more time passes, we start seeing HTTP 200 responses as the tokens are getting refilled. 
+
 
 In order to inspect,
 ```bash
-curl -i http://sms-istio.local/
+curl -i http://sms-istio.local/sms/
 ```
 
 That should give you:

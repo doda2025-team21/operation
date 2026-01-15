@@ -6,6 +6,11 @@ if File.exist?(".env")
   end
 end
 
+# Create an empty inventory.cfg if it does not exist
+unless File.exist?("inventory.cfg")
+  File.write("inventory.cfg", "")
+end
+
 # You can also manually set them here!
 NUM_WORKERS   = ENV.fetch("NUM_WORKERS", "2").to_i   # number of worker nodes
 CTRL_CPUS     = ENV.fetch("CTRL_CPUS", "1").to_i
@@ -61,6 +66,49 @@ Vagrant.configure("2") do |config|
   end
 
   #----------------------------------------------------------
+  # Generate inventory.cfg automatically
+  #----------------------------------------------------------
+
+  config.trigger.before :provision do |t|
+    t.name = "generating inventory.cfg"
+    t.ruby do |env_variable, triggering_machine|
+      node_names = ["ctrl"] + (1..NUM_WORKERS).map {|i| "node-#{i}"}
+      running = []
+      node_names.each do |name|
+        out = `vagrant status #{name}`
+        running << name if out.include?("running")
+      end
+
+      ANSIBLE_INVENTORY_FILE = "inventory.cfg"
+
+      File.open("#{ANSIBLE_INVENTORY_FILE}", 'w') do |f|
+        f.write "[controllers]\n"
+        if running.include?("ctrl")
+          f.write "ctrl ansible_host=192.168.56.100 ansible_private_key_file=.vagrant/machines/ctrl/virtualbox/private_key\n"
+        end 
+        f.write "\n"
+        
+        f.write "[workers]\n"
+        (1..NUM_WORKERS).each do |i|
+          node = "node-#{i}"
+          octet = 100 + i 
+          ip =  "192.168.56.#{octet}"
+          if running.include?(node)
+            f.write "#{node} ansible_host=#{ip} ansible_private_key_file=.vagrant/machines/#{node}/virtualbox/private_key\n"
+          end
+        end 
+
+        f.write "\n"
+
+        f.write "[all:vars]\n"
+        f.write "ansible_user=vagrant\n"
+        f.write "ansible_python_interpreter=/usr/bin/python3\n"
+        f.write "num_workers=#{NUM_WORKERS}\n"
+
+      end
+    end 
+  end
+  #----------------------------------------------------------
   # Ansible provisioning (Step 3 + Step 4)
   #----------------------------------------------------------
   # 说明：
@@ -72,7 +120,7 @@ Vagrant.configure("2") do |config|
   # 1) General playbook: runs on all nodes (Step 3: provision + Step 4: SSH keys)
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/general.yml"
-    ansible.inventory_path = nil          # let Vagrant auto-generate
+    ansible.inventory_path = "inventory.cfg"          
     ansible.limit = "all"
     ansible.extra_vars = {
       num_workers: NUM_WORKERS
@@ -82,7 +130,7 @@ Vagrant.configure("2") do |config|
   # 2) Controller-specific playbook (later steps will live here)
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/ctrl.yml"
-    ansible.inventory_path = nil
+    ansible.inventory_path = "inventory.cfg"
     ansible.limit = "ctrl"
     ansible.extra_vars = {
       num_workers: NUM_WORKERS
@@ -92,7 +140,7 @@ Vagrant.configure("2") do |config|
   # 3) Worker-specific playbook (later steps will live here)
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/node.yml"
-    ansible.inventory_path = nil
+    ansible.inventory_path = "inventory.cfg"
     ansible.limit = "node-*"
     ansible.extra_vars = {
       num_workers: NUM_WORKERS
