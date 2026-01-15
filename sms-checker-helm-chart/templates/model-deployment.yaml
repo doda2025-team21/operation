@@ -1,16 +1,19 @@
+# Stable deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.model.name }}
+  name: {{ .Values.model.name }}-stable
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: {{ .Values.model.name }}
+      version: stable
   template:
     metadata:
       labels:
         app: {{ .Values.model.name }}
+        version: stable
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.model.metricsPort }}"
@@ -30,9 +33,57 @@ spec:
               value: "{{ .Values.model.port }}"
             - name: METRICS_PORT
               value: "{{ .Values.model.metricsPort }}"
+            - name: MODEL_VERSION
+              value: "stable"
           volumeMounts:
             - name: model-output
               mountPath: /app/output
       volumes:
         - name: model-output
-          emptyDir: {}   # hostPath later if needed (Excellent tier)
+          emptyDir: {}
+---
+{{- if .Values.istio.canary.enabled }}
+# Canary deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.model.name }}-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.model.name }}
+      version: canary
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.model.name }}
+        version: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.model.metricsPort }}"
+        prometheus.io/path: "/metrics"
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: {{ .Values.model.name }}
+          image: "{{ .Values.model.image }}:{{ .Values.model.canaryTag | default .Values.model.tag }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.model.port }}
+            - name: metrics
+              containerPort: {{ .Values.model.metricsPort }}
+          env:
+            - name: MODEL_PORT
+              value: "{{ .Values.model.port }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.model.metricsPort }}"
+            - name: MODEL_VERSION
+              value: "canary"
+          volumeMounts:
+            - name: model-output
+              mountPath: /app/output
+      volumes:
+        - name: model-output
+          emptyDir: {}
+{{- end }}

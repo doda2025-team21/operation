@@ -40,6 +40,39 @@ Even though the rubric specifically mentions to *NOT* use a service tunnel, you 
 
 2. In browser, open `sms.local/sms/` and `sms-preview.local/sms/`(If you you'be `--set app.ingress.hosts.preview=sms-preview.local`). It takes probably half a minute to work.
 
+### Testing Canary Deployment with Istio
+
+First, to verify that the canary deployment and Istio traffic management are working correctly, use the following commands.
+
+    KUBECONFIG=./kubeconfig kubectl get pods -l app=model-service --show-labels
+
+You should see pods with both `version=stable` and `version=canary` labels.
+
+Next, check the istio resources
+
+    KUBECONFIG=./kubeconfig kubectl get virtualservice model-service-vs -o yaml
+    KUBECONFIG=./kubeconfig kubectl get destinationrule model-service-destinationrule -o yaml
+
+The virtualservice should define traffic weight distribution between stable and canary subsets. The destinationrule should define subsets for both `stable` and `canary` versions.
+
+Now, test the traffic distribution
+
+Run multiple requests to observe traffic being split between stable and canary versions:
+
+    for i in $(seq 1 20); do
+      KUBECONFIG=./kubeconfig kubectl exec -it deploy/sleep -- curl -s model-service:8081/predict \
+        -X POST -H "Content-Type: application/json" -d '{"sms": "test message"}' | jq -r '.version // "stable"'
+    done
+
+The responses should be distributed according to the weight percentages defined in the virtualservice (now is 8:2).
+
+Finally, check the pod logs if both stable and canary pods are receiving traffic
+
+    KUBECONFIG=./kubeconfig kubectl logs -l app=model-service,version=stable --tail=10
+    KUBECONFIG=./kubeconfig kubectl logs -l app=model-service,version=canary --tail=10
+
+Both sets of logs should show incoming requests based on the configured traffic split.
+
 ## Prometheus Monitoring (Local/Minikube)
 
 The chart includes kube-prometheus-stack as a subchart for monitoring.
