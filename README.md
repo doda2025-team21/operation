@@ -350,13 +350,27 @@ run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@ex
       ![alt text](docs\sc_traffic_alert.png)
 
 ### Testing the alert end-to-end
-1. Port-forward istio ingress: 
+1. View the Rule in Prometheus by port-forwarding:
+    ```yaml
+    kubectl port-forward svc/prometheus-operated 9090:9090
+    ```
+    Now you can open prometheus on [http://localhost:9090](http://localhost:9090). Verify under Status -> Rule Health to see `high traffic alert` rule with the status as OK. Additionally under Alerts, you can find the rule with status INACTIVE.
+
+    Keep this terminal running.
+
+2. In a separate terminal window, to view the metrics and dashboard in Grafana, use a different port to port-forward to:
+    ```yaml
+    kubectl port-forward svc/sms-checker-grafana 3000:80
+    ```
+    Go to [http://localhost:3000](http://localhost:3000) and use username: `admin` and password: `admin` to login. Open dashboard -> Application Metrics.
+
+3. Generate traffic to observe metrics & trigger alert. Port-forward istio ingress: 
     ```yaml
     kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80
     ```
     Keep this terminal running.
 
-2. Generate Sustained Traffic: Open a new terminal and generate high traffic:
+  Open a new terminal and generate high traffic:
       ```bash
       for i in {1..600}; do
         curl -X POST http://localhost:8080/sms/ \
@@ -367,21 +381,21 @@ run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@ex
       done
       ```
 
-3. Observe Alert Lifecycle: In Prometheus (Alerts page);
+4. Observe Alert Lifecycle: In Prometheus (Alerts page);
   
     | Time    | State   |
     | ------- | ------- |
     | < 2 min | Pending |
     | ≥ 2 min | Firing  |
 
-4. Verify Alertmanager: 
+5. Verify Alertmanager: 
     ```yaml
     kubectl port-forward svc/alertmanager-operated 9093:9093
     ```
     Open: [http://localhost:9093](http://localhost:9093)\
     You should see **HighRequestRate** in Firing state.
 
-5. Verify Email Delivery
+6. Verify Email Delivery
     - Alert email is sent when the alert fires
     - A resolve email is sent after traffic stops
 
