@@ -136,3 +136,8 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 - Taeyong Kwon:
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
     - Made readme to verify the istio, and to observe the traffic distribution between stable and canary version
+
+- Dibyendu Gupta:
+    - My PR for this week was on the alerting feature from A3: [Altering through emails](https://github.com/doda2025-team21/operation/pull/40).
+    - This feature implements email alerts when the app received more than 2 requests/min for a sustained period of 1 minute. 
+    - The implementation required scraping of frontend application metrics, defining a rule in Prometheus, and use AlertManager to enable and configure email-based notifications. The dashboard in Grafana can be used to visualize alerts too.
