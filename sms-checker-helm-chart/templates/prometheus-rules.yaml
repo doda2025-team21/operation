@@ -9,10 +9,10 @@ spec:
     - name: traffic-alerts
       rules:
         - alert: HighRequestRate
-          expr: sum(rate(sms_requests_total[1m])) * 60 > 15
-          for: 2m
+          expr: sum(rate(sms_requests_total[1m])) * 60 > 2
+          for: 1m
           labels:
             severity: warning
           annotations:
             summary: "High Request Volume"
-            description: "More than 15 requests/min for over 2 minutes."
+            description: "More than 2 requests/min for over 1 minutes."
