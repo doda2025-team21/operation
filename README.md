@@ -370,16 +370,16 @@ run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@ex
     ```
     Keep this terminal running.
 
-  Open a new terminal and generate high traffic:
-      ```bash
-      for i in {1..600}; do
-        curl -X POST http://localhost:8080/sms/ \
-          -H "Host: sms-istio.local" \
-          -H "Content-Type: application/json" \
-          -d '{"sms":"alert test"}' >/dev/null
-        sleep 0.1
-      done
-      ```
+    Open a new terminal and generate high traffic for about 3-4 minutes:
+    ```bash
+    while true; do
+      curl -X POST http://localhost:8080/sms/ \
+        -H "Host: sms-istio.local" \
+        -H "Content-Type: application/json" \
+        -d '{"sms":"alert test"}' >/dev/null
+      sleep 0.05
+    done
+    ```
 
 4. Observe Alert Lifecycle: In Prometheus (Alerts page);
   
