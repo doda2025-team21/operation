@@ -43,6 +43,8 @@ prometheus:
   scrapeTimeout: "10s"
 
 monitoring:
+  enabled: true
+  namespace: "monitoring" 
   prometheusRelease: "myprom"
 
 alertmanager:
