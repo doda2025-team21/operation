@@ -136,3 +136,13 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 - Taeyong Kwon:
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
     - Made readme to verify the istio, and to observe the traffic distribution between stable and canary version
+
+- Guotao Gou:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/36
+    - Tested our Ansible/Vagrant system and Kubernetes system works correctly with our optimized app image version.
+
+# Week 7 (Jan +12)
+- Guotao Gou:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/45
+    - According to A1 requirement, changed our docker compose model/app version the same with Kubernetes.
+    - Tested and make sure docker compose works with new model/app version number.
