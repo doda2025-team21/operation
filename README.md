@@ -488,6 +488,28 @@ helm upgrade --install sms-checker ./sms-checker-helm-chart \
 
 ## Deploy with Istio Traffic Management
 
+### Enable Istio Sidecar Injection (Required)
+
+Before deploying, you must label the namespace to enable automatic Istio sidecar injection. Without this label, pods will not have the `istio-proxy` container and Istio traffic management will not work.
+
+```bash
+# Label the namespace for Istio sidecar injection
+kubectl label namespace default istio-injection=enabled
+
+# Verify the label
+kubectl get namespace default --show-labels
+```
+
+If you've already deployed the Helm chart without the namespace label, restart the deployments to inject the sidecar:
+```bash
+kubectl rollout restart deployment app-stable app-canary model-service-stable model-service-canary
+```
+
+After restart, verify pods have 2 containers (app + istio-proxy):
+```bash
+kubectl get pods -l app=app -o jsonpath='{range .items[*]}{.metadata.name}: {.spec.containers[*].name}{"\n"}{end}'
+```
+
 ### Full Deployment Command
 ```bash
 # Deploy with Istio enabled, canary release, and monitoring
