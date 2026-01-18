@@ -10,3 +10,5 @@ data:
 {{ .Files.Get "dashboards/main-dashboard-a3.json" | indent 4 }}
   decision-making-a4.json: |
 {{ .Files.Get "dashboards/decision-making-a4.json" | indent 4 }}
+  continuous-experimentation.json: |
+{{ .Files.Get "dashboards/continuous-experimentation.json" | indent 4 }}
