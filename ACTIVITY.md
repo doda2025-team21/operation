@@ -153,4 +153,10 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Now, all VMs mount the same shared VirtualBox folder as /mnt/shared into the VM.
     - And, the deployed application mounts this path as a hostPath Volume into at least one Deployment (In our case that is the stable version of app). 
     - Created a verification file "shared/a3-kubernetes-proof.txt" to showcase that the same data is visible on multiple VMs, and the deployed app pod can access the shared directory. 
-    - Please follow the instructions in README.md to test it out. 
+    - Please follow the instructions in README.md to test it out.
+ 
+- Taeyong Kwon:
+    - My PR of the week : https://github.com/doda2025-team21/operation/pull/47
+    - Built a grafana dashboard to illustrate the difference between deployed version. It tracks the sms request rate between stable and canary app pods, compares the latency, and shows the visual traffic distribution
+    - Stable is in blue and canary is in orange
+    - Added the grafana dashboard to grafana configmap so that it will get deployed with the helm chart
