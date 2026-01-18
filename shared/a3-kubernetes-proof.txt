@@ -1,0 +1,3 @@
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
