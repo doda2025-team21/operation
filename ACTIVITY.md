@@ -146,3 +146,11 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/45
     - According to A1 requirement, changed our docker compose model/app version the same with Kubernetes.
     - Tested and make sure docker compose works with new model/app version number.
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/44 
+    - This is an improvement on A3 Kubernetes Usage
+    - Now, all VMs mount the same shared VirtualBox folder as /mnt/shared into the VM.
+    - And, the deployed application mounts this path as a hostPath Volume into at least one Deployment (In our case that is the stable version of app). 
+    - Created a verification file "shared/a3-kubernetes-proof.txt" to showcase that the same data is visible on multiple VMs, and the deployed app pod can access the shared directory. 
+    - Please follow the instructions in README.md to test it out. 
