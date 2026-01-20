@@ -1,0 +1,26 @@
+{{- if .Values.shadow.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.model.name }}-shadow
+spec:
+  replicas: {{ .Values.shadow.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.model.name }}
+      version: shadow
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.model.name }}
+        version: shadow
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: {{ .Values.model.name }}
+          image: "{{ .Values.shadow.image.repository }}:{{ .Values.shadow.image.tag }}"
+          imagePullPolicy: {{ .Values.shadow.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.model.port }}
+{{- end }}
