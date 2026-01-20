@@ -120,7 +120,7 @@ shadow:
   enabled: true
   replicas: 1
   image:
-    repository: "ghcr.io/doda2025-team21/model-service"
-    tag: "1.0.5-monitoring" # stable version of our image
+    repository: ghcr.io/doda2025-team21/model-service
+    tag: 1.0.5-monitoring # stable version of our image
     pullPolicy: IfNotPresent
   mirrorPercentage: 100
