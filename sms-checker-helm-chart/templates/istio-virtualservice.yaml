@@ -22,7 +22,17 @@ spec:
               number: {{ .Values.app.port }}
             subset: canary
           weight: 100
+      {{- if .Values.istio.shadow.enabled }}
+      mirror:
+        host: {{ .Values.app.name }}
+        port:
+          number: {{ .Values.app.port }}
+        subset: shadow
+      mirrorPercentage:
+        value: {{ .Values.istio.shadow.mirrorPercentage }}
+      {{- end }}
     {{- end }}
+
     # Default routing with canary percentage
     - route:
         - destination:
@@ -39,4 +49,13 @@ spec:
             subset: canary
           weight: {{ .Values.istio.canary.weight }}
         {{- end }}
+      {{- if .Values.istio.shadow.enabled }}
+      mirror:
+        host: {{ .Values.app.name }}
+        port:
+          number: {{ .Values.app.port }}
+        subset: shadow
+      mirrorPercentage:
+        value: {{ .Values.istio.shadow.mirrorPercentage }}
+      {{- end }}
 {{- end }}

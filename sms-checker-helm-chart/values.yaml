@@ -115,6 +115,10 @@ istio:
     headerName: x-local-rate-limit
     headerValue: "TOO_MANY_REQUESTS"
 
+  shadow:
+    enabled: true
+    mirrorPercentage: 100
+
 # For shadow launch
 shadow:
   enabled: true
