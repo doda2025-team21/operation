@@ -83,6 +83,7 @@ prometheus:
 ```
 
 # How to delete everything
+
 ```bash
 # delete helm repo
 helm repo list -A

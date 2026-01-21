@@ -334,7 +334,7 @@ echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
 
 ## Istio Resources Created
 
-The Helm chart creates the following Istio resources when `istio.enabled=true`.
+The Helm chart creates the following istio resources when `istio.enabled=true`.
 The chart deploys three istio objects to be precise, to expose throught the provisioned 
 istio ingressgateway.
 
@@ -349,7 +349,7 @@ metadata:
   name: app-gateway
 spec:
   selector:
-    istio: ingressgateway  # Configurable via values.yaml
+    istio: ingressgateway  
   servers:
     - port:
         number: 80
@@ -366,7 +366,6 @@ The virtualservice contains routing rules that supports two following ways of re
 - **force canary (for testing)**: Requests with `x-canary: true` header go to canary 1005.
 - **normal traffic split**: All requests follow the default traffic split (90% stable, 10% canary)
 
-This matches the requirement to demonstrate small percentage of canary release and allowing special requests using special headers.
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -523,32 +522,26 @@ KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=stable
 KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=canary
 ```
 
-### Testing Model-Service Canary Routing
+### Testing Model-Service Canary Routing (Consistent Routing: old→old, new→new)
 
-The model-service has its own canary deployment with Istio routing based on source labels. This ensures consistent routing: requests from stable app pods go to stable model, requests from canary app pods go to canary model.
+Consistent routing is achieved via version-specific services: `app-stable` → `model-service-stable`, `app-canary` → `model-service-canary`.
 
-#### 1. Verify Deployments
+#### Verification Commands
 ```bash
+# 1. Check services (should see: model-service, model-service-stable, model-service-canary)
+KUBECONFIG=./kubeconfig kubectl get svc | grep model-service
+
+# 2. Check pods have correct version labels
 KUBECONFIG=./kubeconfig kubectl get pods -l app=model-service --show-labels
-```
-You should see pods with `version=stable` and `version=canary` labels.
 
-#### 2. Verify Istio Configuration
-```bash
-KUBECONFIG=./kubeconfig kubectl get virtualservice,destinationrule | grep model
-```
+# 3. Verify MODEL_HOST routing
+KUBECONFIG=./kubeconfig kubectl get deploy app-stable -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="MODEL_HOST")].value}'
+# Expected: http://model-service-stable:8081
 
-#### 3. Verify Routing Configuration in Envoy
-The routing is configured per-workload. Check that stable app routes to stable model:
-```bash
-KUBECONFIG=./kubeconfig kubectl exec deploy/app-stable -c istio-proxy -- \
-  pilot-agent request GET config_dump | grep -A5 '"cluster": "outbound|8081|' | head -10
-```
-You should see `outbound|8081|stable|model-service` for app-stable pods.
+KUBECONFIG=./kubeconfig kubectl get deploy app-canary -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="MODEL_HOST")].value}'
+# Expected: http://model-service-canary:8081
 
-#### 4. Check Logs After Using the App
-Open the web UI at `http://sms-istio.local/sms/` and submit a few SMS messages. Then check which model-service received the requests:
-```bash
+# 4. After sending requests via the web UI, verify routing in logs
 KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-stable -c model-service --tail=5 | grep POST
 KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-canary -c model-service --tail=5 | grep POST
 ```
