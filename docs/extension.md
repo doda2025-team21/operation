@@ -36,7 +36,7 @@ verifies tags in a CI environment.
 
 Diagram of the proposed release gate:
 
-![CI release pipeline](./assets/extension-release-pipeline.svg)
+![CI release pipeline](https://github.com/user-attachments/assets/05d74b61-73f5-48ae-9dd2-3ff348a979a3)
 
 ## Implementation plan (1-5 days)
 1. Add `operation/.github/workflows/deploy-helm.yml`.
