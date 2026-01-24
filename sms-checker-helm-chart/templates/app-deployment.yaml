@@ -38,7 +38,7 @@ spec:
             - name: METRICS_PORT
               value: "{{ .Values.app.metricsPort }}"
             - name: MODEL_HOST
-              value: "http://model-service:{{ .Values.model.port }}"
+              value: "http://{{ .Values.model.name }}:{{ .Values.model.port }}"
             # ---------------------------
             # CONFIGMAP ENV VARIABLES
             # ---------------------------
@@ -123,4 +123,30 @@ spec:
               value: "http://{{ .Values.model.name }}:{{ .Values.model.port }}"
             - name: APP_VERSION
               value: "canary"
+            # ---------------------------
+            # CONFIGMAP ENV VARIABLES
+            # ---------------------------
+            - name: WELCOME_MESSAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Values.app.name }}-config"
+                  key: WELCOME_MESSAGE
+            - name: DUMMY_VALUE
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Values.app.name }}-config"
+                  key: DUMMY_VALUE
+            # ---------------------------
+            # SECRET ENV VARIABLES
+            # ---------------------------
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.app.name }}-secret"
+                  key: API_KEY
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.app.name }}-secret"
+                  key: PASSWORD
 {{- end }}
