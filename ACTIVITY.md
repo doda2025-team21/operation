@@ -160,3 +160,10 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Built a grafana dashboard to illustrate the difference between deployed version. It tracks the sms request rate between stable and canary app pods, compares the latency, and shows the visual traffic distribution
     - Stable is in blue and canary is in orange
     - Added the grafana dashboard to grafana configmap so that it will get deployed with the helm chart
+
+# W9: Jan 19-25
+
+- Guotao Gou:
+    - My PRs of the week: https://github.com/doda2025-team21/operation/pull/49, https://github.com/doda2025-team21/operation/pull/50
+    - Finished first part of extension-proposal of A4. Added smoke-test extension proposal and fills in the implementation plan and pipeline graph.
+    - Finished deployment.md a1 part.
