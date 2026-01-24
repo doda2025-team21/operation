@@ -167,3 +167,8 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - My PRs of the week: https://github.com/doda2025-team21/operation/pull/49, https://github.com/doda2025-team21/operation/pull/50
     - Finished first part of extension-proposal of A4. Added smoke-test extension proposal and fills in the implementation plan and pipeline graph.
     - Finished deployment.md a1 part.
+
+- Dibyendu Gupta:
+    - My PR for this week is about [A4: Additional use case - shadow launch](https://github.com/doda2025-team21/operation/pull/48). 
+    - This PR is for aids real-life distributed systems to evaluate a new version of a service or model under real production traffic without affecting end users.
+    - The implementation involved creating a second model-service deployment, which is then mirrored through an `istio VirtualServic` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
