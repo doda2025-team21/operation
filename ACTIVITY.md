@@ -171,4 +171,4 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 - Dibyendu Gupta:
     - My PR for this week is about [A4: Additional use case - shadow launch](https://github.com/doda2025-team21/operation/pull/48). 
     - This PR is for aids real-life distributed systems to evaluate a new version of a service or model under real production traffic without affecting end users.
-    - The implementation involved creating a second model-service deployment, which is then mirrored through an `istio VirtualServic` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
+    - The implementation involved creating a second model-service deployment (only difference is in `version: shadow`), which is then mirrored through an `istio VirtualServic` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
