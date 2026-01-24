@@ -394,7 +394,7 @@ run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@ex
       └── HighRequestRate
       ```
       The initial state should be **INACTIVE** (green).
-      ![alt text](docs\sc_traffic_alert.png)
+      ![alt text](docs/assets/traffic_alert.png)
 
 ### Testing the alert end-to-end
 1. View the Rule in Prometheus by port-forwarding:
