@@ -7,4 +7,4 @@ inventory.cfg
 kubeconfig
 AGENTS.md
 docs/feedback.md
-/istio-1.22.0
+/istio-*

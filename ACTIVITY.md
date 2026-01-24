@@ -126,6 +126,11 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - In my PR, I optimized out app image so it will download the jar file, and just simply run java -jar, so it'll be much faster.
     - I tested and debuged many times for this app image using github action, resolved the github action authentication and ghcr.io maven privilege problem.
 
+- Dibyendu Gupta
+    - I was ill during this week and wasn't able to make active contribution through a PR for this week. I had contributions through commits during the week and during christmas break to make up for it. 
+    - You can have a look at this PR: [Non-working implementation of alerting](https://github.com/doda2025-team21/operation/pull/39) to view the commit history for active contribution during this week. 
+
+
 # W7: Jan 5-11
 - Ceylin Ece:
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/37 (This is an improvement on A4)
@@ -136,6 +141,9 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 - Taeyong Kwon:
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
     - Made readme to verify the istio, and to observe the traffic distribution between stable and canary version
+
+- Dibyendu Gupta:
+    - I had no contributions this week.
 
 - Guotao Gou:
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/36
@@ -160,3 +168,10 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Built a grafana dashboard to illustrate the difference between deployed version. It tracks the sms request rate between stable and canary app pods, compares the latency, and shows the visual traffic distribution
     - Stable is in blue and canary is in orange
     - Added the grafana dashboard to grafana configmap so that it will get deployed with the helm chart
+
+- Dibyendu Gupta:
+    - My PR for this week was on the alerting feature from A3: [Altering through emails](https://github.com/doda2025-team21/operation/pull/40).
+    - This feature implements email alerts when the app received more than 2 requests/min for a sustained period of 1 minute. 
+    - The implementation required scraping of frontend application metrics, defining a rule in Prometheus, and use AlertManager to enable and configure email-based notifications. The dashboard in Grafana can be used to visualize alerts too.
+
+# W9: Jan 19-25
