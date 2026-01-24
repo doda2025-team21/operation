@@ -205,6 +205,53 @@ Then open `http://sms.local/` to reach the frontend; it talks to `model-service`
 ### Minikube note
 If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
 
+## Using a Shared VirtualBox Folder to Create Shared Storage Across All Pods
+All VMs mount the same shared VirtualBox folder as `/mnt/shared` into the VM.
+The deployed application mounts this path as a `hostPath` Volume into at least one `Deployment` (In our case this deployment is `app-deployment.yaml`; specifically, the stable version of the app).
+
+In order to prove this functionality, we have `a3-kubernetes-proof.txt` file in the `shared` directory. 
+
+According to the official Kubernetes documentation, "if you allow a read-write mount of any host path by an untrusted Pod, the containers in that Pod may be able to subvert the read-write host mount." Therefore, in order to avoid any possible issues that may arrive, any mounts of `hostPath` volume are "read only." 
+
+To verify shared storage, read the file from /mnt/shared on two different VMs (the controller and a worker):
+```bash
+ssh vagrant@192.168.56.100 "cat /mnt/shared/a3-kubernetes-proof.txt"
+ssh vagrant@192.168.56.101 "cat /mnt/shared/a3-kubernetes-proof.txt"
+```
+
+You should see:
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+
+This shows that `/mnt/shared` exists on both VMs, and its contents are identical. 
+
+Afterwards, verify inside the Kubernetes pod, since we implemented this functionality for the stable version of app, do: 
+
+```bash
+KUBECONFIG=./kubeconfig kubectl get pods -n default | grep app-stable
+```
+
+pick one of the running pods, replace `<copy-your-pod-name-here>`with your actual pod name, and run : `cat /mnt/shared/a3-kubernetes-proof.txt` in that specific container. 
+
+```bash
+KUBECONFIG=./kubeconfig kubectl exec -n default -it <copy-your-pod-name-here> -- cat /mnt/shared/a3-kubernetes-proof.txt
+```
+
+You should see: 
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+
+This means that this pod can successfully see `/mnt/shared`. Pod mount is working. 
+
+
+
 ## Prometheus Monitoring
 
 The Helm chart includes kube-prometheus-stack which installs:
@@ -266,12 +313,6 @@ prometheus:
   enabled: false
 ```
 
-## How to clean up
-```bash
-vagrant destroy
-```
-
-
 ## Displaying Grafana Dashboards
 Since a ConfigMap is provided (sms-checker-helm-chart/templates/grafana-a3.yaml), there is no need for the manual installation. 
 
@@ -280,6 +321,133 @@ There are two separate dashboards, one for A3 and one for the decision process f
 Open http://grafana.local in your browser.
 
 Go to the Dashboards from the side menu. And you chould be able to see our two dashboards at the top. (A3 Dashboard 1, and A4 Supporting the Decision Process)
+
+## How to clean up
+```bash
+vagrant destroy
+```
+
+## Email Alerting using Prometheus
+
+### Installation Pre-requisites
+- Minikube (running with application deployed)
+- Helm
+- istioctl (install istio to your cluster if not installed and enable sidecar injection)
+    ```yaml
+    istioctl install --set profile=demo -y
+    kubectl label namespace default istio-injection=enabled
+    ```
+- Docker (Minikube driver)
+
+### Alert Details
+#### HighRequestRate
+
+**Condition:** More than 15 requests per minute, aggregated across all pods
+
+**Expression:** ``` rate(<request_counter_metric>[1m]) * 60 > 15 ```
+
+**Duration:** Must hold for 2 consecutive minutes
+
+**Severity:** warning
+
+**Notification:** Email (with resolve notification enabled)
+
+### Install/Upgrade the Helm Chart
+```yaml
+helm install sms-checker . \
+  --set alertmanager.smtp.user="YOUR_GMAIL@gmail.com" \
+  --set alertmanager.smtp.password="YOUR_APP_PASSWORD" \
+  --set alertmanager.recipient="YOUR_EMAIL@example.com"
+```
+run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@example.com with your actual email address.
+
+**Note:** Gmail requires an App Password, not your normal account password.
+
+### Verify Setup
+1. Check pods: Ensure the following pods are running:
+    - Prometheus
+    - AlertManager
+    - Grafana
+    - Application pods (app & model-service)
+    ```yaml
+    kubectl get pods
+    ```
+
+2. Verify existence of alert rule in kubernetes; you're expected to see `high-traffic-alert` rule in the list of rules.
+    ```yaml
+    kubectl get prometheusrules
+    ```
+
+3. Verify Alertmanager Config Mount: Look for the following file in the directory: alertmanager.yaml.gz
+    ```yaml
+    kubectl exec -it alertmanager-<pod-name> -- ls /etc/alertmanager/config
+    ```
+
+4. Verify Alert Rule in Prometheus: 
+    ```yaml
+    kubectl port-forward svc/prometheus-operated 9090:9090
+    ```
+    Open: [http://localhost:9090](http://localhost:9090)\
+    Navigate to Status -> Alerts, you should see:
+      ```bash
+      traffic-alerts
+      └── HighRequestRate
+      ```
+      The initial state should be **INACTIVE** (green).
+      ![alt text](docs\sc_traffic_alert.png)
+
+### Testing the alert end-to-end
+1. View the Rule in Prometheus by port-forwarding:
+    ```yaml
+    kubectl port-forward svc/prometheus-operated 9090:9090
+    ```
+    Now you can open prometheus on [http://localhost:9090](http://localhost:9090). Verify under Status -> Rule Health to see `high traffic alert` rule with the status as OK. Additionally under Alerts, you can find the rule with status INACTIVE.
+
+    Keep this terminal running.
+
+2. In a separate terminal window, to view the metrics and dashboard in Grafana, use a different port to port-forward to:
+    ```yaml
+    kubectl port-forward svc/sms-checker-grafana 3000:80
+    ```
+    Go to [http://localhost:3000](http://localhost:3000) and use username: `admin` and password: `admin` to login. Open dashboard -> Application Metrics.
+
+3. Generate traffic to observe metrics & trigger alert. Port-forward istio ingress: 
+    ```yaml
+    kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80
+    ```
+    Keep this terminal running.
+
+    Open a new terminal and generate high traffic for about 3-4 minutes:
+    ```bash
+    while true; do
+      curl -X POST http://localhost:8080/sms/ \
+        -H "Host: sms-istio.local" \
+        -H "Content-Type: application/json" \
+        -d '{"sms":"alert test"}' >/dev/null
+      sleep 0.05
+    done
+    ```
+
+4. Observe Alert Lifecycle: In Prometheus (Alerts page);
+  
+    | Time    | State   |
+    | ------- | ------- |
+    | < 2 min | Pending |
+    | ≥ 2 min | Firing  |
+
+5. Verify Alertmanager: 
+    ```yaml
+    kubectl port-forward svc/alertmanager-operated 9093:9093
+    ```
+    Open: [http://localhost:9093](http://localhost:9093)\
+    You should see **HighRequestRate** in Firing state.
+
+6. Verify Email Delivery
+    - Alert email is sent when the alert fires
+    - A resolve email is sent after traffic stops
+
+    Check spam folder if not visible.
+
 
 
 # A4: Traffic Management with Istio
