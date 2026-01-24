@@ -205,6 +205,53 @@ Then open `http://sms.local/` to reach the frontend; it talks to `model-service`
 ### Minikube note
 If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
 
+## Using a Shared VirtualBox Folder to Create Shared Storage Across All Pods
+All VMs mount the same shared VirtualBox folder as `/mnt/shared` into the VM.
+The deployed application mounts this path as a `hostPath` Volume into at least one `Deployment` (In our case this deployment is `app-deployment.yaml`; specifically, the stable version of the app).
+
+In order to prove this functionality, we have `a3-kubernetes-proof.txt` file in the `shared` directory. 
+
+According to the official Kubernetes documentation, "if you allow a read-write mount of any host path by an untrusted Pod, the containers in that Pod may be able to subvert the read-write host mount." Therefore, in order to avoid any possible issues that may arrive, any mounts of `hostPath` volume are "read only." 
+
+To verify shared storage, read the file from /mnt/shared on two different VMs (the controller and a worker):
+```bash
+ssh vagrant@192.168.56.100 "cat /mnt/shared/a3-kubernetes-proof.txt"
+ssh vagrant@192.168.56.101 "cat /mnt/shared/a3-kubernetes-proof.txt"
+```
+
+You should see:
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+
+This shows that `/mnt/shared` exists on both VMs, and its contents are identical. 
+
+Afterwards, verify inside the Kubernetes pod, since we implemented this functionality for the stable version of app, do: 
+
+```bash
+KUBECONFIG=./kubeconfig kubectl get pods -n default | grep app-stable
+```
+
+pick one of the running pods, replace `<copy-your-pod-name-here>`with your actual pod name, and run : `cat /mnt/shared/a3-kubernetes-proof.txt` in that specific container. 
+
+```bash
+KUBECONFIG=./kubeconfig kubectl exec -n default -it <copy-your-pod-name-here> -- cat /mnt/shared/a3-kubernetes-proof.txt
+```
+
+You should see: 
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+
+This means that this pod can successfully see `/mnt/shared`. Pod mount is working. 
+
+
+
 ## Prometheus Monitoring
 
 The Helm chart includes kube-prometheus-stack which installs:

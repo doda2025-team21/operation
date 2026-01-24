@@ -65,6 +65,36 @@ Vagrant.configure("2") do |config|
     end
   end
 
+
+  #----------------------------------------------------------
+  # Synced-folders
+  #----------------------------------------------------------
+
+  # the first parameter is a path to a directory on the host machine.
+  # in the case that the path is relative, it is relative to the project root
+  # the second parameter must be an absolute path of where to share the folder 
+  # within the guest machine. 
+  # this folder will be created (recursively, if it must) if it does not exist.
+  # By default, vagrant mounts the synced folders with the owner/group set 
+  # to the SSH user and any parent folders set to root
+  # create: if true, the host path will be created if 
+  # it does not exist. Defaults to false
+  # owner: the user who should be the owner of this synced folder. 
+  # by default this will be the SSH user. 
+  # group: the group that will own the synced folder. 
+  # by default this will bbe the SSH user. 
+  # optionally you can use "root" but not needed
+  # mount_options: a list of additional mount options to pass 
+  # to the mount command
+
+  config.vm.synced_folder "./shared", "/mnt/shared",
+    create: true,
+    owner: "vagrant", 
+    group: "vagrant"
+    # mount_options: []
+
+
+
   #----------------------------------------------------------
   # Generate inventory.cfg automatically
   #----------------------------------------------------------
