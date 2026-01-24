@@ -23,4 +23,7 @@ spec:
     - name: canary
       labels:
         version: canary
+    - name: shadow
+      labels:
+        version: shadow
 {{- end }}

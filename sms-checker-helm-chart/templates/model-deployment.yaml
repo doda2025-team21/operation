@@ -7,10 +7,12 @@ spec:
   selector:
     matchLabels:
       app: {{ .Values.model.name }}
+      version: stable
   template:
     metadata:
       labels:
         app: {{ .Values.model.name }}
+        version: stable
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.model.metricsPort }}"
