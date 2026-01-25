@@ -1,4 +1,6 @@
-# Main service (for general access)
+
+# Main service for external access (used by VirtualService when Istio is enabled)
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,7 +18,9 @@ spec:
       port: {{ .Values.model.metricsPort }}
       targetPort: {{ .Values.model.metricsPort }}
 ---
+
 # Stable service (for consistent old→old routing)
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -38,6 +42,7 @@ spec:
 ---
 {{- if .Values.istio.canary.enabled }}
 # Canary service (for consistent new→new routing)
+
 apiVersion: v1
 kind: Service
 metadata:

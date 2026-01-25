@@ -24,8 +24,10 @@ model:
   port: 8081
   metricsPort: 9091
   image: "ghcr.io/doda2025-team21/model-service"
-  tag: "1.0.6-nltk-fix"      # Stable version tag (with NLTK fix)
-  canaryTag: "1.0.6-nltk-fix" # Canary version tag
+  
+  tag: "1.0.5-monitoring"      # Stable version tag
+  canaryTag: "1.0.5-monitoring" # Canary version tag - set to different version for testing new model
+  tag: "1.0.5-monitoring" # stable version of our image (later ones are not working as intended)
   pullPolicy: Always
 
 appConfig:
