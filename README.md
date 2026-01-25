@@ -133,6 +133,8 @@ ssh vagrant@192.168.56.100
 ssh vagrant@192.168.56.101
 ssh vagrant@192.168.56.102
 
+# To get out of node, press ctrl+D
+
 # Check cluster health from host
 KUBECONFIG=./kubeconfig kubectl get nodes -o wide
 KUBECONFIG=./kubeconfig kubectl get pods -A
@@ -142,28 +144,6 @@ KUBECONFIG=./kubeconfig kubectl get svc -n metallb-system
 KUBECONFIG=./kubeconfig kubectl get svc -n ingress-nginx ingress-nginx-controller -o wide
 KUBECONFIG=./kubeconfig kubectl get svc -n kubernetes-dashboard
 KUBECONFIG=./kubeconfig kubectl get svc -n istio-system istio-ingressgateway -o wide
-```
-
-## Accessing the Kubernetes Dashboard (This doesn't work somehow)
-```bash
-# Add host entry on your laptop for ingress IP from MetalLB (default 192.168.56.90)
-echo "192.168.56.90 dashboard.local" | sudo tee -a /etc/hosts
-
-# Create a fresh admin token (run on host, talks to controller VM)
-ssh vagrant@192.168.56.100 "kubectl -n kubernetes-dashboard create token admin-user"
-```
-Open `http://dashboard.local/` and paste the token. Traffic to the dashboard service is proxied via the nginx ingress with `nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"`.
-
-## Using Istio (AI generated, Not sure it's runnable or not)
-```bash
-ssh vagrant@192.168.56.100 "istioctl version"
-KUBECONFIG=./kubeconfig kubectl get svc -n istio-system istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}{"\n"}'
-```
-Deploy Istio-enabled workloads by labeling namespaces (`kubectl label ns <name> istio-injection=enabled`) and routing through the Istio ingress gateway IP (default 192.168.56.91).
-
-## How to clean up
-```bash
-vagrant destroy
 ```
 
 # A3: Operate and Monitor Kubernetes
@@ -456,6 +436,101 @@ This section documents the Istio based traffic management configuration for cana
 
 ## Istio Ingress Gateway Configuration
 
+If you already ran A3 and deployed with helm chart, you must label the namespace to enable automatic Istio sidecar injection. Without this label, pods will not have the `istio-proxy` container and Istio traffic management will not work.
+
+# 1. Label namespace for sidecar injection
+KUBECONFIG=./kubeconfig kubectl label namespace default istio-injection=enabled --overwrite
+
+If pods existed before you labelled the namespace, you need to restart pods so that they get sidecars too (optional)
+kubectl rollout restart deployment app-stable app-canary model-service-stable model-service-canary
+
+# 2. for full deployment of A4 release with all the requirements, run this command ( Deploying with Istio enabled, canary release, and monitoring)
+
+KUBECONFIG=./kubeconfig helm upgrade --install sms-checker ./sms-checker-helm-chart \
+  -f sms-checker-helm-chart/values.yaml \
+  --set istio.enabled=true \
+  --set istio.host=sms-istio.local \
+  --set istio.canary.enabled=true \
+  --set istio.canary.weight=10 \
+  --set istio.stickySession.enabled=true \
+  --set prometheus.enabled=true \
+  --set kube-prometheus-stack.prometheusOperator.admissionWebhooks.enabled=false 
+  #webhook admission just validates the servicemonitor yaml and prometheus grafana metrics all work without this
+
+sometimes upgrade fails saying another operation is in progress. In this case, just unistall the release and install again using the above command. You can uninstall first with the following:
+
+KUBECONFIG=./kubeconfig helm uninstall sms-checker --no-hooks
+
+then run the install again.
+
+Also, prometheus gets easily stuck. You can delete the job by using 
+
+KUBECONFIG=./kubeconfig kubectl delete job --all
+
+and try using the above command to retry the upgrade.
+
+
+# 3. Restart pods to inject sidecars (helm upgrade may not trigger this)
+
+KUBECONFIG=./kubeconfig kubectl rollout restart deployment app-stable app-canary model-service-stable model-service-canary
+
+#4 Add Host Entry
+```bash
+# Point the Istio host to the ingress gateway IP
+echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
+```
+# Verification
+
+# 1. App accessible via Istio Gateway
+curl http://sms-istio.local/
+
+# 2. Check 90/10 traffic split (run 10+ times, ~90% stable, ~10% canary)
+```bash
+
+for i in {1..10}; do 
+  curl -s http://sms-istio.local/sms/ -X POST -H "Content-Type: application/json" -d '{"sms": "test '$i'"}' > /dev/null
+  sleep 1
+done
+
+echo "=== STABLE ===" && KUBECONFIG=./kubeconfig kubectl logs deploy/app-stable -c app --tail=20 | grep "test"
+echo "=== CANARY ===" && KUBECONFIG=./kubeconfig kubectl logs deploy/app-canary -c app --tail=20 | grep "test"
+```
+# 3. Sticky sessions (same cookie = same version)
+
+# Test sticky sessions - same cookie should hit same version
+
+curl -c cookies.txt -b cookies.txt http://sms-istio.local/sms/ -X POST -H "Content-Type: application/json" -d '{"sms": "sticky test 1"}'
+curl -c cookies.txt -b cookies.txt http://sms-istio.local/sms/ -X POST -H "Content-Type: application/json" -d '{"sms": "sticky test 2"}'
+curl -c cookies.txt -b cookies.txt http://sms-istio.local/sms/ -X POST -H "Content-Type: application/json" -d '{"sms": "sticky test 3"}'
+
+echo "=== STABLE ===" && KUBECONFIG=./kubeconfig kubectl logs deploy/app-stable -c app --tail=10 | grep "sticky"
+echo "=== CANARY ===" && KUBECONFIG=./kubeconfig kubectl logs deploy/app-canary -c app --tail=10 | grep "sticky"
+
+(all 3 should go to the same version)
+
+# 4. Consistent routing: old→old, new→new
+
+# Clear old logs by checking fresh requests
+# First, make requests that go to STABLE app
+for i in {1..5}; do 
+  curl -s http://sms-istio.local/sms/ -X POST -H "Content-Type: application/json" -d '{"sms": "routing test '$i'"}' > /dev/null
+  sleep 1
+done
+
+# Check which modelservice received the requests
+echo "=== MODEL-STABLE ===" && KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-stable -c model-service --tail=10 | grep POST
+echo "=== MODEL-CANARY ===" && KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-canary -c model-service --tail=10 | grep POST
+
+# 5. Grafana dashboard
+KUBECONFIG=./kubeconfig kubectl port-forward svc/sms-checker-grafana 3000:80
+# Open http://localhost:3000 (admin/prom-operator)
+# Check SMS Checker dashboard exists with A/B comparison
+
+# 6. Rate limiting (additional use case) 
+for i in {1..15}; do curl -s http://sms-istio.local/sms/ -d "message=test$i" -w "%{http_code}\n" -o /dev/null; done
+# After ~10 requests, should get 429 Too Many Requests
+
+
 The Istio ingress gateway is provisioned during cluster setup (`ansible/finalization.yml`) and is not a part of the Helm chart, as specified in the assignment description. The gateway runs in the `istio-system` namespace with the following configuration:
 
 ### Gateway Labels and Selector
@@ -478,7 +553,6 @@ istio:
     # Below is the namespace where ingress gateway is deployed
     namespace: istio-system
 ```
-
 If deploying to a cluster with a different ingress gateway configuration as mentioned in the assignment, you can override the selector using the following:
 ```bash
 helm upgrade --install sms-checker ./sms-checker-helm-chart \
