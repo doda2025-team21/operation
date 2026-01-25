@@ -87,6 +87,36 @@ git pull
 # Create VMs and run general/ctrl/node provisioning
 vagrant up --no-provision            # rerun with `vagrant provision` if needed
 
+```
+## Inventory generation
+- Our Vagrantfile generates a valid `inventory.cfg` for Ansible that contains all (and only) active nodes. 
+- To avoid potential race conditions, first create VMs as stated in the previous step, and then run provisioning. 
+- Inspect the generated inventory (`inventory.cfg`) by running:
+```bash
+vagrant provision
+```
+## Testing inventory generation
+- To test `inventory.cfg` contains only active nodes:
+  - halt one of the nodes, for instance, in the case that number of workers are adjusted to 3 in the Preparation step (e.g.,`NUM_WORKERS=3`), run:
+
+```bash
+vagrant halt node-3
+vagrant provision
+cat inventory.cfg
+```
+- node-3 should not be visible under [workers].
+- Afterwards:
+
+```bash
+vagrant up node-3
+vagrant provision
+cat inventory.cfg
+```
+- node-3 should now be visible under [workers].
+
+The folowing commands can be used to rerun the playbooks manually. 
+
+```bash 
 # Rerun playbooks manually (useful after edits)
 ansible-playbook -u vagrant -i inventory.cfg ansible/general.yml
 ansible-playbook -u vagrant -i inventory.cfg ansible/ctrl.yml
@@ -175,6 +205,53 @@ Then open `http://sms.local/` to reach the frontend; it talks to `model-service`
 ### Minikube note
 If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
 
+## Using a Shared VirtualBox Folder to Create Shared Storage Across All Pods
+All VMs mount the same shared VirtualBox folder as `/mnt/shared` into the VM.
+The deployed application mounts this path as a `hostPath` Volume into at least one `Deployment` (In our case this deployment is `app-deployment.yaml`; specifically, the stable version of the app).
+
+In order to prove this functionality, we have `a3-kubernetes-proof.txt` file in the `shared` directory. 
+
+According to the official Kubernetes documentation, "if you allow a read-write mount of any host path by an untrusted Pod, the containers in that Pod may be able to subvert the read-write host mount." Therefore, in order to avoid any possible issues that may arrive, any mounts of `hostPath` volume are "read only." 
+
+To verify shared storage, read the file from /mnt/shared on two different VMs (the controller and a worker):
+```bash
+ssh vagrant@192.168.56.100 "cat /mnt/shared/a3-kubernetes-proof.txt"
+ssh vagrant@192.168.56.101 "cat /mnt/shared/a3-kubernetes-proof.txt"
+```
+
+You should see:
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+
+This shows that `/mnt/shared` exists on both VMs, and its contents are identical. 
+
+Afterwards, verify inside the Kubernetes pod, since we implemented this functionality for the stable version of app, do: 
+
+```bash
+KUBECONFIG=./kubeconfig kubectl get pods -n default | grep app-stable
+```
+
+pick one of the running pods, replace `<copy-your-pod-name-here>`with your actual pod name, and run : `cat /mnt/shared/a3-kubernetes-proof.txt` in that specific container. 
+
+```bash
+KUBECONFIG=./kubeconfig kubectl exec -n default -it <copy-your-pod-name-here> -- cat /mnt/shared/a3-kubernetes-proof.txt
+```
+
+You should see: 
+
+If you are seeing this message inside a pod, shared storage is working correctly! 
+
+
+
+This means that this pod can successfully see `/mnt/shared`. Pod mount is working. 
+
+
+
 ## Prometheus Monitoring
 
 The Helm chart includes kube-prometheus-stack which installs:
@@ -236,12 +313,6 @@ prometheus:
   enabled: false
 ```
 
-## How to clean up
-```bash
-vagrant destroy
-```
-
-
 ## Displaying Grafana Dashboards
 Since a ConfigMap is provided (sms-checker-helm-chart/templates/grafana-a3.yaml), there is no need for the manual installation. 
 
@@ -250,6 +321,133 @@ There are two separate dashboards, one for A3 and one for the decision process f
 Open http://grafana.local in your browser.
 
 Go to the Dashboards from the side menu. And you chould be able to see our two dashboards at the top. (A3 Dashboard 1, and A4 Supporting the Decision Process)
+
+## How to clean up
+```bash
+vagrant destroy
+```
+
+## Email Alerting using Prometheus
+
+### Installation Pre-requisites
+- Minikube (running with application deployed)
+- Helm
+- istioctl (install istio to your cluster if not installed and enable sidecar injection)
+    ```yaml
+    istioctl install --set profile=demo -y
+    kubectl label namespace default istio-injection=enabled
+    ```
+- Docker (Minikube driver)
+
+### Alert Details
+#### HighRequestRate
+
+**Condition:** More than 15 requests per minute, aggregated across all pods
+
+**Expression:** ``` rate(<request_counter_metric>[1m]) * 60 > 15 ```
+
+**Duration:** Must hold for 2 consecutive minutes
+
+**Severity:** warning
+
+**Notification:** Email (with resolve notification enabled)
+
+### Install/Upgrade the Helm Chart
+```yaml
+helm install sms-checker . \
+  --set alertmanager.smtp.user="YOUR_GMAIL@gmail.com" \
+  --set alertmanager.smtp.password="YOUR_APP_PASSWORD" \
+  --set alertmanager.recipient="YOUR_EMAIL@example.com"
+```
+run this command from the `sms-checker-helm-chart` folder. Replace YOUR_EMAIL@example.com with your actual email address.
+
+**Note:** Gmail requires an App Password, not your normal account password.
+
+### Verify Setup
+1. Check pods: Ensure the following pods are running:
+    - Prometheus
+    - AlertManager
+    - Grafana
+    - Application pods (app & model-service)
+    ```yaml
+    kubectl get pods
+    ```
+
+2. Verify existence of alert rule in kubernetes; you're expected to see `high-traffic-alert` rule in the list of rules.
+    ```yaml
+    kubectl get prometheusrules
+    ```
+
+3. Verify Alertmanager Config Mount: Look for the following file in the directory: alertmanager.yaml.gz
+    ```yaml
+    kubectl exec -it alertmanager-<pod-name> -- ls /etc/alertmanager/config
+    ```
+
+4. Verify Alert Rule in Prometheus: 
+    ```yaml
+    kubectl port-forward svc/prometheus-operated 9090:9090
+    ```
+    Open: [http://localhost:9090](http://localhost:9090)\
+    Navigate to Status -> Alerts, you should see:
+      ```bash
+      traffic-alerts
+      └── HighRequestRate
+      ```
+      The initial state should be **INACTIVE** (green).
+      ![alt text](docs\sc_traffic_alert.png)
+
+### Testing the alert end-to-end
+1. View the Rule in Prometheus by port-forwarding:
+    ```yaml
+    kubectl port-forward svc/prometheus-operated 9090:9090
+    ```
+    Now you can open prometheus on [http://localhost:9090](http://localhost:9090). Verify under Status -> Rule Health to see `high traffic alert` rule with the status as OK. Additionally under Alerts, you can find the rule with status INACTIVE.
+
+    Keep this terminal running.
+
+2. In a separate terminal window, to view the metrics and dashboard in Grafana, use a different port to port-forward to:
+    ```yaml
+    kubectl port-forward svc/sms-checker-grafana 3000:80
+    ```
+    Go to [http://localhost:3000](http://localhost:3000) and use username: `admin` and password: `admin` to login. Open dashboard -> Application Metrics.
+
+3. Generate traffic to observe metrics & trigger alert. Port-forward istio ingress: 
+    ```yaml
+    kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80
+    ```
+    Keep this terminal running.
+
+    Open a new terminal and generate high traffic for about 3-4 minutes:
+    ```bash
+    while true; do
+      curl -X POST http://localhost:8080/sms/ \
+        -H "Host: sms-istio.local" \
+        -H "Content-Type: application/json" \
+        -d '{"sms":"alert test"}' >/dev/null
+      sleep 0.05
+    done
+    ```
+
+4. Observe Alert Lifecycle: In Prometheus (Alerts page);
+  
+    | Time    | State   |
+    | ------- | ------- |
+    | < 2 min | Pending |
+    | ≥ 2 min | Firing  |
+
+5. Verify Alertmanager: 
+    ```yaml
+    kubectl port-forward svc/alertmanager-operated 9093:9093
+    ```
+    Open: [http://localhost:9093](http://localhost:9093)\
+    You should see **HighRequestRate** in Firing state.
+
+6. Verify Email Delivery
+    - Alert email is sent when the alert fires
+    - A resolve email is sent after traffic stops
+
+    Check spam folder if not visible.
+
 
 
 # A4: Traffic Management with Istio
@@ -334,7 +532,7 @@ echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
 
 ## Istio Resources Created
 
-The Helm chart creates the following istio resources when `istio.enabled=true`.
+The Helm chart creates the following Istio resources when `istio.enabled=true`.
 The chart deploys three istio objects to be precise, to expose throught the provisioned 
 istio ingressgateway.
 
@@ -349,7 +547,7 @@ metadata:
   name: app-gateway
 spec:
   selector:
-    istio: ingressgateway  
+    istio: ingressgateway  # Configurable via values.yaml
   servers:
     - port:
         number: 80
@@ -366,6 +564,7 @@ The virtualservice contains routing rules that supports two following ways of re
 - **force canary (for testing)**: Requests with `x-canary: true` header go to canary 1005.
 - **normal traffic split**: All requests follow the default traffic split (90% stable, 10% canary)
 
+This matches the requirement to demonstrate small percentage of canary release and allowing special requests using special headers.
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -522,26 +721,32 @@ KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=stable
 KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=canary
 ```
 
-### Testing Model-Service Canary Routing (Consistent Routing: old→old, new→new)
+### Testing Model-Service Canary Routing
 
-Consistent routing is achieved via version-specific services: `app-stable` → `model-service-stable`, `app-canary` → `model-service-canary`.
+The model-service has its own canary deployment with Istio routing based on source labels. This ensures consistent routing: requests from stable app pods go to stable model, requests from canary app pods go to canary model.
 
-#### Verification Commands
+#### 1. Verify Deployments
 ```bash
-# 1. Check services (should see: model-service, model-service-stable, model-service-canary)
-KUBECONFIG=./kubeconfig kubectl get svc | grep model-service
-
-# 2. Check pods have correct version labels
 KUBECONFIG=./kubeconfig kubectl get pods -l app=model-service --show-labels
+```
+You should see pods with `version=stable` and `version=canary` labels.
 
-# 3. Verify MODEL_HOST routing
-KUBECONFIG=./kubeconfig kubectl get deploy app-stable -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="MODEL_HOST")].value}'
-# Expected: http://model-service-stable:8081
+#### 2. Verify Istio Configuration
+```bash
+KUBECONFIG=./kubeconfig kubectl get virtualservice,destinationrule | grep model
+```
 
-KUBECONFIG=./kubeconfig kubectl get deploy app-canary -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="MODEL_HOST")].value}'
-# Expected: http://model-service-canary:8081
+#### 3. Verify Routing Configuration in Envoy
+The routing is configured per-workload. Check that stable app routes to stable model:
+```bash
+KUBECONFIG=./kubeconfig kubectl exec deploy/app-stable -c istio-proxy -- \
+  pilot-agent request GET config_dump | grep -A5 '"cluster": "outbound|8081|' | head -10
+```
+You should see `outbound|8081|stable|model-service` for app-stable pods.
 
-# 4. After sending requests via the web UI, verify routing in logs
+#### 4. Check Logs After Using the App
+Open the web UI at `http://sms-istio.local/sms/` and submit a few SMS messages. Then check which model-service received the requests:
+```bash
 KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-stable -c model-service --tail=5 | grep POST
 KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-canary -c model-service --tail=5 | grep POST
 ```
@@ -635,19 +840,96 @@ echo "192.168.56.91 sms-istio.local" | sudo tee -a /etc/hosts
 ```
 
 ### Testing Rate Limiting
+
+User-based rate-limiting is implemented, the users that we know have the user IDs: 001, 002, and 003. 
+
+In the case that the user ID does not match, we fall back to global rate-limiting. 
+
+For demonstration purposes, we have kept the "tokens_per_fill" relatively low. 
+
 ```bash
-for i in {1..50}; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" http://sms-istio.local/)
+echo "waiting just in case"
+sleep 65
+
+echo User 1 with user ID: 001
+for i in {1..5}; do
+  code=$(curl -s -o /dev/null -w "001 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 001" \
+  http://sms-istio.local/sms/)
   echo "Request $i: $code"
 done
-```
 
-You should be seeing HTTP 200 for the first ~5 requests
-Afterwards, you should be seeing HTTP 429
+echo "waiting for refill"
+sleep 65
+
+echo User 2 with user ID: 002
+for i in {1..7}; do
+  code=$(curl -s -o /dev/null -w "002 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 002" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+echo User 3 with user ID: 003
+for i in {1..9}; do
+  code=$(curl -s -o /dev/null -w "003 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 003" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+echo Unknown user with user ID: 777
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "777 $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  -H "x-instance-id: 777" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+echo "waiting for refill"
+sleep 65
+
+echo User with no header
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "NOHEADER $i %{http_code}\n" \
+  -H "Host: sms-istio.local" \
+  http://sms-istio.local/sms/)
+  echo "Request $i: $code"
+done
+
+```
+For user 1:
+- You should be seeing HTTP 200 for the first ~3 requests
+- Afterwards, you should be seeing HTTP 429
+
+For user 2:
+- You should be seeing HTTP 200 for the first ~5 requests
+- Afterwards, you should be seeing HTTP 429
+
+For user 3:
+- You should be seeing HTTP 200 for the first ~7 requests
+- Afterwards, you should be seeing HTTP 429
+
+For unknown user and no header:
+- You should be seeing HTTP 200 until the global limit is reached
+- Afterwards, you should start seeing HTTP 429
+
+It is expected that you will start seeing HTTP 200 after some HTTP 429 responses. The fill interval is 60s, meaning that every minute, the specified amount of tokens (tokens per fill) is added to the token bucket. Since we are sending low numbers of requests with the first three users, the 60s limit is not reached. However, as you can see in the last two users, since we send more requests and more time passes, we start seeing HTTP 200 responses as the tokens are getting refilled. 
+
 
 In order to inspect,
 ```bash
-curl -i http://sms-istio.local/
+curl -i http://sms-istio.local/sms/
 ```
 
 That should give you:
