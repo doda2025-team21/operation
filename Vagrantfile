@@ -98,6 +98,11 @@ Vagrant.configure("2") do |config|
   #----------------------------------------------------------
   # Generate inventory.cfg automatically
   #----------------------------------------------------------
+  # Notes:
+  # - If inventory_path is not set, Vagrant automatically generates an inventory
+  #   with hostnames like ctrl, node-1, node-2, ...
+  # - Host patterns are used to scope each playbook to the appropriate hosts
+  # - extra_vars is used to pass num_workers for later use
 
   config.trigger.before :provision do |t|
     t.name = "generating inventory.cfg"
@@ -141,13 +146,15 @@ Vagrant.configure("2") do |config|
   #----------------------------------------------------------
   # Ansible provisioning (Step 3 + Step 4)
   #----------------------------------------------------------
-  # 说明：
-  # - 不指定 inventory_path，Vagrant 会自动生成 inventory，
-  #   里面有主机名 ctrl, node-1, node-2, ...
-  # - 我们通过 hosts pattern 区分 playbook 的作用范围
-  # - extra_vars 把 num_workers 传进去，后面可以用
+  # This section uses Vagrant’s Ansible provisioner to configure
+  # the virtual machines after they have been created.
+  #
+  # The provisioning is split into multiple playbooks, each
+  # targeting a specific set of machines using host limits.
+  # All playbooks share the same inventory and receive the
+  # number of worker nodes via extra_vars.
 
-  # 1) General playbook: runs on all nodes (Step 3: provision + Step 4: SSH keys)
+  # 1) General playbook: runs on all nodes and performs common setup tasks
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/general.yml"
     ansible.inventory_path = "inventory.cfg"          
@@ -157,7 +164,7 @@ Vagrant.configure("2") do |config|
     }
   end
 
-  # 2) Controller-specific playbook (later steps will live here)
+  # 2) Controller-specific playbook (host: ctrl); control-plane–specific configuration
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/ctrl.yml"
     ansible.inventory_path = "inventory.cfg"
@@ -167,7 +174,7 @@ Vagrant.configure("2") do |config|
     }
   end
 
-  # 3) Worker-specific playbook (later steps will live here)
+  # 3) Worker-specific playbook (host: node-*)
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/node.yml"
     ansible.inventory_path = "inventory.cfg"
@@ -175,5 +182,14 @@ Vagrant.configure("2") do |config|
     ansible.extra_vars = {
       num_workers: NUM_WORKERS
     }
+  end
+
+  # 4) Finalization playbook: controller only and performs the following:
+  # Installs MetalLB for LoadBalancer, Deploys ingress-nginx as the default Ingress controller, 
+  # Setup the Kubernetes Dashboard, Installs Istio (control plane + ingress gateway)
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "ansible/finalization.yml"
+    ansible.inventory_path = "inventory.cfg"
+    ansible.limit = "ctrl"
   end
 end
