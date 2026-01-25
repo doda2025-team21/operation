@@ -1,4 +1,4 @@
-# Week 1 (Nov 15+)
+# W2: Nov 17-23
 - Guotao Gou: I have worked on [F1 and F2](https://github.com/doda2025-team21/lib-version/pull/1) of A1 assignment. Finished lib-version and publish its Maven package to github.
 I have worked on [F11](https://github.com/doda2025-team21/lib-version/pull/3), and [add gitbot for automatic tagging and version bumping](https://github.com/doda2025-team21/lib-version/pull/4)
 
@@ -21,7 +21,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 - Ceylin Ece: I worked on F5 and F6. For F5, I implemented multi-stage builds on the Dockerfile of the 'model-service' repository. The final image size decreased from 933 MB to 659 MB. For F6, I made ports and URLs configurable via ENV variables with default values. My PR of this week is: https://github.com/doda2025-team21/operation/pull/5 
 
-# Week 2 (Nov 24+)
+# W3: Nov 24-30
 - Guotao Gou, [finished step 1 to 4](https://github.com/doda2025-team21/operation/pull/8).
 - Dibyendu:
     - Worked on Steps 9-15
@@ -38,7 +38,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 
 - Ceylin Ece: I implemented the steps 5-8. For step 5, I used the 'ansible.builtin.shell' module to disable SWAP on the running system. I also removed the SWAP entry from /etc/fstab using the 'ansible.builtin.lineinfile' module. For step 6, I used the 'ansible.builtin.copy' module to add the two modules that are 'overlay' and 'br_netfilter'. Using the 'community.general.modprobe' module, I loaded 'br_netfilter' and 'overlay' in the running system. For step 7, using 'ansible.posix.sysctl', I enabled the properties 'net.ipv4.ip_forward', 'net.bridge.bridge-nf-call-iptables', and 'net.bridge.bridge-nf-call-ip6tables' by setting the value to '1'. For step 8, I implemented the Advanced solution. Please check templates/hosts.j2 in addition to general.yml for this solution. I used the 'ansible.builtin.copy' module and Jinja2 loop for this step. PR of this week: https://github.com/doda2025-team21/operation/pull/9  
 
-# Week 3 (Dec 1+)
+# W4: Dec 1-7
 
 - Taeyong Kwon:
     - This week, I integrated full Prometheus-based monitoring across the operation, app, and model-service repositories.
@@ -75,7 +75,7 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - I am also currently working on integrating configMaps and secrets as placeholders in helm-chart for an advanced solution. A PR for this branch hasn't been made yet, it should be available sometime this weekend and the activity file will be update!
 
 
-# Week 4 (Dec 8+)
+# W5: Dec 8-14
 
 - Ceylin Ece: 
     - I implemented the "Additional Use Case" task this week.
@@ -104,3 +104,74 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - I'm also currently working on "alerting" from the previous assignment (A3) because the person responsible for this has left the course.
     - Had some issues with running and testing the cluster this week and was sick, so didn't work to a 100% capacity this week. 
     - Will complete "alerting" from A3 , and work on some tasks from A4 (additional use case) next week.
+
+# W6: Dec 15-21
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/34 (This was an improvement on A2)
+    - Our Vagrantfile was not generating 'inventory.cfg.' It was a separate, static file. Therefore, I fixed it. 
+    - I made Vagrantfile generate 'inventory.cfg' automatically and made Ansible use it. 
+    - Our 'inventory.cfg' contains only active nodes.
+ 
+- Taeyong Kwon
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
+    - This PR implements canary deployment support for the model service to enable consistent version routing between app and model service deployments (stable-to-stable, canary-to-canary), which is part of the a4 requirement.
+    - I added separate stable and canary deployments for the model service with appropriate version labels
+    - I introduced Istio VirtualService for model service routing based on source labels
+    - I then clarified destinationrule for model service traffic management, because only for app was existing so far.
+
+- Guotao Gou
+    - My PR of the week: https://github.com/doda2025-team21/app/pull/13
+    - Out previous app docker image will run mvn run, and this process will download all dependency files, which makes it very slow.
+    - In my PR, I optimized out app image so it will download the jar file, and just simply run java -jar, so it'll be much faster.
+    - I tested and debuged many times for this app image using github action, resolved the github action authentication and ghcr.io maven privilege problem.
+
+- Dibyendu Gupta
+    - I was ill during this week and wasn't able to make active contribution through a PR for this week. I had contributions through commits during the week and during christmas break to make up for it. 
+    - You can have a look at this PR: [Non-working implementation of alerting](https://github.com/doda2025-team21/operation/pull/39) to view the commit history for active contribution during this week. 
+
+
+# W7: Jan 5-11
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/37 (This is an improvement on A4)
+    - Previously, we only had global-rate-limiting. Now, I have also implemented user-based rate-limiting. 
+    - For the cases that the request is made with a known user ID, then the user-specific rate-limiting will be applied to that user (Look at our README.md file to test it out.)
+    - In the case that there is an unknown user or there are no headers, we fall back to global-rate-limiting.
+ 
+- Taeyong Kwon:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/33
+    - Made readme to verify the istio, and to observe the traffic distribution between stable and canary version
+
+- Dibyendu Gupta:
+    - I had no contributions this week.
+
+- Guotao Gou:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/36
+    - Tested our Ansible/Vagrant system and Kubernetes system works correctly with our optimized app image version.
+
+# W8: Jan 12-18
+- Guotao Gou:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/45
+    - According to A1 requirement, changed our docker compose model/app version the same with Kubernetes.
+    - Tested and make sure docker compose works with new model/app version number.
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/44 
+    - This is an improvement on A3 Kubernetes Usage
+    - Now, all VMs mount the same shared VirtualBox folder as /mnt/shared into the VM.
+    - And, the deployed application mounts this path as a hostPath Volume into at least one Deployment (In our case that is the stable version of app). 
+    - Created a verification file "shared/a3-kubernetes-proof.txt" to showcase that the same data is visible on multiple VMs, and the deployed app pod can access the shared directory. 
+    - Please follow the instructions in README.md to test it out.
+ 
+- Taeyong Kwon:
+    - My PR of the week : https://github.com/doda2025-team21/operation/pull/47
+    - Built a grafana dashboard to illustrate the difference between deployed version. It tracks the sms request rate between stable and canary app pods, compares the latency, and shows the visual traffic distribution
+    - Stable is in blue and canary is in orange
+    - Added the grafana dashboard to grafana configmap so that it will get deployed with the helm chart
+
+- Dibyendu Gupta:
+    - My PR for this week was on the alerting feature from A3: [Altering through emails](https://github.com/doda2025-team21/operation/pull/40).
+    - This feature implements email alerts when the app received more than 2 requests/min for a sustained period of 1 minute. 
+    - The implementation required scraping of frontend application metrics, defining a rule in Prometheus, and use AlertManager to enable and configure email-based notifications. The dashboard in Grafana can be used to visualize alerts too.
+
+# W9: Jan 19-25

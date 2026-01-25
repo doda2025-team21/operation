@@ -4,9 +4,10 @@ app:
   metricsPort: 9090
   replicas: 2
   image: "ghcr.io/doda2025-team21/app"
+  pullPolicy: Always
 
-  tag: "0.2.6"      # Stable version tag (use actual available tag from your registry)
-  canaryTag: "0.2.4" # Canary version tag - with new UI design
+  tag: "0.2.17"      # Stable version tag (use actual available tag from your registry)
+  canaryTag: "0.2.14" # Canary version tag - with new UI design
 
 
   service:
@@ -25,6 +26,8 @@ model:
   image: "ghcr.io/doda2025-team21/model-service"
   tag: "1.0.5-monitoring"      # Stable version tag
   canaryTag: "1.0.5-monitoring" # Canary version tag - set to different version for testing new model
+  tag: "1.0.5-monitoring" # stable version of our image (later ones are not working as intended)
+  pullPolicy: Always
 
 appConfig:
   welcomeMessage: "Hello from ConfigMap!"
@@ -41,10 +44,24 @@ prometheus:
   scrapeInterval: "15s"
   scrapeTimeout: "10s"
 
+monitoring:
+  enabled: true
+  namespace: "monitoring" 
+  prometheusRelease: "myprom"
+
+alertmanager:
+  smtp:
+    user: ""
+    password: ""
+  recipient: ""
+
 # kube-prometheus-stack subchart configuration
 kube-prometheus-stack:
   alertmanager:
-    enabled: false
+    enabled: true
+    alertmanagerSpec:
+      useExistingSecret: true
+      configSecret: alertmanager-custom-config
   grafana:
     enabled: true
     adminPassword: "admin"
@@ -108,9 +125,9 @@ istio:
   rateLimiting:
     enabled: true
     # number of requests in a burst
-    burstSize: 5
+    burstSize: 10
     # number of tokens to add on each refill
-    tokensPerFill: 1
+    tokensPerFill: 3
     # refill window (seconds)
     fillIntervalSeconds: 60
     headerName: x-local-rate-limit

@@ -1,10 +1,10 @@
 .DS_Store
 /model
 .vagrant
+inventory.cfg
 *.log
 *.conf
 kubeconfig
 AGENTS.md
-docs/a*
 docs/feedback.md
-/istio-1.22.0
+/istio-*

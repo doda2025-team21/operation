@@ -67,6 +67,20 @@ spec:
                   key: PASSWORD
             - name: APP_VERSION
               value: "stable"
+          # ---------------------------
+          # VOLUME MOUNTING A DIRECTORY
+          # ---------------------------
+          volumeMounts:
+            - mountPath: /mnt/shared
+              name: my-volume
+              readOnly: true
+      volumes:
+        - name: my-volume
+        # mount /mnt/shared
+          hostPath:
+          # directory location on host, but only if that directory already exists
+            path: /mnt/shared
+            type: Directory
 ---
 {{- if .Values.istio.canary.enabled }}
 # Canary deployment
