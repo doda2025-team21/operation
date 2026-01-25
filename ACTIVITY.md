@@ -187,4 +187,14 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - The implementation involved creating a second model-service deployment (only difference is in `version: shadow`), which is then mirrored through an `istio VirtualServic` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
     - The extension proposal discusses the shortcomings of our current project with regards to the quality of the model that we deploy, and a proposal that uses release-engineering concepts that were learnt during this course.
 
+
+- Taeyong Kwon:
+
+  - My Prs of the week: https://github.com/doda2025-team21/operation/pull/52 , doda2025-team21/model-service#10
+  - Merged the A4 grafana dashboard with A3 dashboard, while meeting all the requirements
+  - Fixed the consistent routing, did the istio canary documentation
+  - Model service was failing with resource stopwords not found error, because NLTK data wasnt included in the docker image. Fixed and built a new image
+
+
+
 # W10: Jan 26-27
