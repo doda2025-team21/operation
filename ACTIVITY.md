@@ -182,11 +182,14 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Finished deployment.md a1 part.
 
 - Dibyendu Gupta:
-    - My PR for this week is about [A4: Additional use case - shadow launch](https://github.com/doda2025-team21/operation/pull/48) and [A4: Extension Proposal about quality checks in ML models](https://github.com/doda2025-team21/operation/pull/54). 
+    - My PRs for this week:
+        - [A4: Additional use case - shadow launch](https://github.com/doda2025-team21/operation/pull/48) 
+        - [A4: Extension Proposal about quality checks in ML models](https://github.com/doda2025-team21/operation/pull/54)
+        - [A2 (Fix): Ansible provisioning through vagrant](https://github.com/doda2025-team21/operation/pull/55)
     - This PR is for aids real-life distributed systems to evaluate a new version of a service or model under real production traffic without affecting end users.
-    - The implementation involved creating a second model-service deployment (only difference is in `version: shadow`), which is then mirrored through an `istio VirtualServic` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
+    - The implementation involved creating a second model-service deployment (only difference is in `version: shadow`), which is then mirrored through an `istio VirtualService` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
     - The extension proposal discusses the shortcomings of our current project with regards to the quality of the model that we deploy, and a proposal that uses release-engineering concepts that were learnt during this course.
-
+    - Ansible provisioning through vagrant was lacking the controller provisioning for steps 20-23. This PR intended on provisioning MetalLB, Istio, Nginx Ingress Controller, and Kubernetes Dashboard for the controller node in the `Vagrantfile`.
 
 - Taeyong Kwon:
 
