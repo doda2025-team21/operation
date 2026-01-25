@@ -488,6 +488,28 @@ helm upgrade --install sms-checker ./sms-checker-helm-chart \
 
 ## Deploy with Istio Traffic Management
 
+### Enable Istio Sidecar Injection (Required)
+
+Before deploying, you must label the namespace to enable automatic Istio sidecar injection. Without this label, pods will not have the `istio-proxy` container and Istio traffic management will not work.
+
+```bash
+# Label the namespace for Istio sidecar injection
+kubectl label namespace default istio-injection=enabled
+
+# Verify the label
+kubectl get namespace default --show-labels
+```
+
+If you've already deployed the Helm chart without the namespace label, restart the deployments to inject the sidecar:
+```bash
+kubectl rollout restart deployment app-stable app-canary model-service-stable model-service-canary
+```
+
+After restart, verify pods have 2 containers (app + istio-proxy):
+```bash
+kubectl get pods -l app=app -o jsonpath='{range .items[*]}{.metadata.name}: {.spec.containers[*].name}{"\n"}{end}'
+```
+
 ### Full Deployment Command
 ```bash
 # Deploy with Istio enabled, canary release, and monitoring
@@ -695,8 +717,38 @@ The app includes an `APP_VERSION` environment variable that can help identify wh
 # View logs from stable deployment
 KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=stable
 
-# View logs from canary deployment  
+# View logs from canary deployment
 KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=canary
+```
+
+### Testing Model-Service Canary Routing
+
+The model-service has its own canary deployment with Istio routing based on source labels. This ensures consistent routing: requests from stable app pods go to stable model, requests from canary app pods go to canary model.
+
+#### 1. Verify Deployments
+```bash
+KUBECONFIG=./kubeconfig kubectl get pods -l app=model-service --show-labels
+```
+You should see pods with `version=stable` and `version=canary` labels.
+
+#### 2. Verify Istio Configuration
+```bash
+KUBECONFIG=./kubeconfig kubectl get virtualservice,destinationrule | grep model
+```
+
+#### 3. Verify Routing Configuration in Envoy
+The routing is configured per-workload. Check that stable app routes to stable model:
+```bash
+KUBECONFIG=./kubeconfig kubectl exec deploy/app-stable -c istio-proxy -- \
+  pilot-agent request GET config_dump | grep -A5 '"cluster": "outbound|8081|' | head -10
+```
+You should see `outbound|8081|stable|model-service` for app-stable pods.
+
+#### 4. Check Logs After Using the App
+Open the web UI at `http://sms-istio.local/sms/` and submit a few SMS messages. Then check which model-service received the requests:
+```bash
+KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-stable -c model-service --tail=5 | grep POST
+KUBECONFIG=./kubeconfig kubectl logs deploy/model-service-canary -c model-service --tail=5 | grep POST
 ```
 
 ## How we control the canary rollout
