@@ -205,6 +205,58 @@ Then open `http://sms.local/` to reach the frontend; it talks to `model-service`
 ### Minikube note
 If using Minikube, enable ingress and get an IP via `minikube addons enable ingress` and `minikube tunnel`, add that IP to `/etc/hosts` for `sms.local`, and browse the same URL.
 
+## Using ConfigMap and Secrets
+The deployed application uses ConfigMap and Secrets.
+In `app-configmap.yaml` we have "WELCOME_MESSAGE", and "DUMMY_VALUE".
+In `app-secrets.yaml` we have "API_KEY", and "PASSWORD". 
+
+These values are not hardcoded. 
+They are used in stable and canary versions of our app. 
+
+To test it out:
+
+```bash
+KUBECONFIG=./kubeconfig kubectl get configmap app-config
+KUBECONFIG=./kubeconfig kubectl get secret app-secret
+```
+
+```bash
+KUBECONFIG=./kubeconfig kubectl get pods -n default | grep app-
+```
+
+```bash
+KUBECONFIG=./kubeconfig kubectl exec <app-pod> -- env | grep WELCOME_MESSAGE
+KUBECONFIG=./kubeconfig kubectl exec <app-pod> -- env | grep DUMMY_VALUE
+```
+
+```bash
+KUBECONFIG=./kubeconfig kubectl exec <app-pod> -- env | grep API_KEY
+KUBECONFIG=./kubeconfig kubectl exec <app-pod> -- env | grep PASSWORD
+```
+
+Additionally, our app does not hardcode the model-service location; it reads the model address from "MODEL_HOST" environment variable. Therefore, model-service can be relocated by changing the Kubernetes configuration. You can test it out by:
+
+```bash
+helm upgrade --install sms-checker ./sms-checker-helm-chart \
+  -f sms-checker-helm-chart/values.yaml \
+  --set model.name=model-service-new-test-name \
+  --kubeconfig kubeconfig
+```
+
+Then run:
+```bash
+KUBECONFIG=./kubeconfig kubectl get deploy app-stable -o yaml | grep -A2 MODEL_HOST
+```
+
+```bash
+KUBECONFIG=./kubeconfig kubectl get svc | grep model
+```
+
+you should see: 
+
+model-service-new-test-name
+
+
 ## Using a Shared VirtualBox Folder to Create Shared Storage Across All Pods
 All VMs mount the same shared VirtualBox folder as `/mnt/shared` into the VM.
 The deployed application mounts this path as a `hostPath` Volume into at least one `Deployment` (In our case this deployment is `app-deployment.yaml`; specifically, the stable version of the app).
