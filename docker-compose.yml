@@ -1,6 +1,6 @@
 services:
   model-service:
-    image: "${MODEL_IMAGE}:${TAG_VERSION:-1.0.5-monitoring}"
+    image: "${MODEL_IMAGE}:${TAG_VERSION:-1.0.6-nltk-fix}"
     container_name: backend
     ports:
       - "${MODEL_PORT:-8081}:${MODEL_PORT:-8081}"
@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
 
   app:
-    image: "${APP_IMAGE}:${TAG_VERSION:-0.2.14}"
+    image: "${APP_IMAGE}:${TAG_VERSION:-1.1.0}"
     container_name: frontend
     ports:
       - "${APP_PORT:-8080}:${APP_PORT:-8080}"
