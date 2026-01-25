@@ -1,3 +1,4 @@
+# Main service (for general access)
 apiVersion: v1
 kind: Service
 metadata:
@@ -14,4 +15,45 @@ spec:
     - name: metrics
       port: {{ .Values.model.metricsPort }}
       targetPort: {{ .Values.model.metricsPort }}
-
+---
+# Stable service (for consistent old→old routing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.model.name }}-stable
+  labels:
+    app: {{ .Values.model.name }}
+    version: stable
+spec:
+  selector:
+    app: {{ .Values.model.name }}
+    version: stable
+  ports:
+    - name: http
+      port: {{ .Values.model.port }}
+      targetPort: {{ .Values.model.port }}
+    - name: metrics
+      port: {{ .Values.model.metricsPort }}
+      targetPort: {{ .Values.model.metricsPort }}
+---
+{{- if .Values.istio.canary.enabled }}
+# Canary service (for consistent new→new routing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.model.name }}-canary
+  labels:
+    app: {{ .Values.model.name }}
+    version: canary
+spec:
+  selector:
+    app: {{ .Values.model.name }}
+    version: canary
+  ports:
+    - name: http
+      port: {{ .Values.model.port }}
+      targetPort: {{ .Values.model.port }}
+    - name: metrics
+      port: {{ .Values.model.metricsPort }}
+      targetPort: {{ .Values.model.metricsPort }}
+{{- end }}

@@ -38,7 +38,7 @@ spec:
             - name: METRICS_PORT
               value: "{{ .Values.app.metricsPort }}"
             - name: MODEL_HOST
-              value: "http://model-service:{{ .Values.model.port }}"
+              value: "http://{{ .Values.model.name }}-stable:{{ .Values.model.port }}"
             # ---------------------------
             # CONFIGMAP ENV VARIABLES
             # ---------------------------
@@ -120,7 +120,7 @@ spec:
             - name: METRICS_PORT
               value: "{{ .Values.app.metricsPort }}"
             - name: MODEL_HOST
-              value: "http://{{ .Values.model.name }}:{{ .Values.model.port }}"
+              value: "http://{{ .Values.model.name }}-canary:{{ .Values.model.port }}"
             - name: APP_VERSION
               value: "canary"
 {{- end }}
