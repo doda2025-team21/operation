@@ -198,6 +198,10 @@ and lastly it supports both volume mounts for custom models and automatic downlo
   - Fixed the consistent routing, did the istio canary documentation
   - Model service was failing with resource stopwords not found error, because NLTK data wasnt included in the docker image. Fixed and built a new image
 
-
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/53 
+    - Now our app-canary version is also using ConfigMap and Secrets values (it was only stable before, extended it to canary)
+    - Previously, the stable deployment referenced the model service using a fixed service name. (canary was fine, only changed stable)
+    - Now, the model service can be relocated just by changing the Kubernetes config.
 
 # W10: Jan 26-27
