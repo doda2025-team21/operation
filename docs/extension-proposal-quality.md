@@ -58,9 +58,47 @@ Introduce an automatically generated quality-gate pipeline that:
 
 ## Implementation Plan (1-5 days)
 
+1. **_Define Quality Gate Metrics:_** Define the quality metrics that should be used to evaluate the ML model based on business use case. The quality metrics could be decision of thresholds, relative regression checks to a baseline model, etc. Schema ould be done implemented in `quality-gates.yaml` file.
+
+2. **_Extend Output to Provide Metrics:_** We need to extend the existing training model workflow to export evaluation metrics and inference metrics (that can be scraped/used by the evaluation pipeline) in-order to make model quality objectively measurable. The extension should not affect model behaviour. Modification must output a `metrics.json` file that can be parsed. 
+
+3. **_Implement Quality Gate Action:_** This task involves building the steps that will parse the metrics, compare them to the existing baseline or thresholds, and succeed/fail depending on the result of the comparison. It should emit a failure message if the quality of the model is below par, and succeed if the quality of the model is satisfied. This could be implemented using a `Github Actions` that would:
+    - Loads `quality-gates.yaml`
+    - Loads current model metrics
+    - Loads previous release metrics
+    - Evaluates each gate
+
+4. **_Integrate the steps into Release Pipeline:_** Insert the quality step before model release to ensure only quality-approved models are released. Make all the release steps depend on passing gate and the workflow needs to be updated with configuring the dependencies correctly. 
+
+5. **_Testing the Gates' Validity (Optional):_** We could perform synthetic gate validation by adding a dedicated job in the workflow that bypasses training and injects synthetic metrics (to evaluate good and bad models). These synthetic metrics are evaluated by quality-gate logic and we'd be able to test the functionality and correctness of the quality gates.
+
+6. **_Documentation & Visualization:_** As a final addition to measure and visualize the metrics: model quality at release, release blocked or allowed, which metric caused failure, etc. This allows us decipher the reason for failure and interpret the results. This can be done by exposing metrics in Prometheus, consequently gathering and visualizing in Grafana (additional dashboard).
+
 ## Expected outcomes
+
+### Release Engineering Improvements
+| Before                            | After                                     |
+| --------------------------------- | ----------------------------------------- |
+| Any trained model can be released | Only quality-approved models are released |
+| Quality evaluated post-hoc        | Quality enforced pre-release              |
+| Silent regressions possible       | Regressions blocked automatically         |
+| Release = artifact exists         | Release = artifact meets policy           |
+
+### How to Measure the Effect (Continuous Experimentation)
+
+#### Hypothesis
+
+Automated quality gates reduce the number of low-quality models entering deployment.
+
+#### Measurement
+
+Compare the ML model releases before vs after introducing gates. We need to draw conclusions from how many times the release pipeline rejected a release based on the quality gate failing. This directly measures release quality. 
+
 
 ## Sources
 
-
 [Application Release Engineering - Best Practices and Tools](https://www.xenonstack.com/insights/application-release-engineering)
+
+[Azure Machine Learning model monitoring](https://learn.microsoft.com/en-us/azure/machine-learning/concept-model-monitoring?view=azureml-api-2)
+
+[Evaluating machine learning models: Establishing quality gates](https://www.codecentric.de/en/knowledge-hub/blog/evaluating-machine-learning-models-quality-gates)
