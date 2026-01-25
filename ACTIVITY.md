@@ -175,3 +175,33 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - The implementation required scraping of frontend application metrics, defining a rule in Prometheus, and use AlertManager to enable and configure email-based notifications. The dashboard in Grafana can be used to visualize alerts too.
 
 # W9: Jan 19-25
+
+- Guotao Gou:
+    - My PRs of the week: https://github.com/doda2025-team21/operation/pull/49, https://github.com/doda2025-team21/operation/pull/50
+    - Finished first part of extension-proposal of A4. Added smoke-test extension proposal and fills in the implementation plan and pipeline graph.
+    - Finished deployment.md a1 part.
+
+- Dibyendu Gupta:
+    - My PRs for this week:
+        - [A4: Additional use case - shadow launch](https://github.com/doda2025-team21/operation/pull/48) 
+        - [A4: Extension Proposal about quality checks in ML models](https://github.com/doda2025-team21/operation/pull/54)
+        - [A2 (Fix): Ansible provisioning through vagrant](https://github.com/doda2025-team21/operation/pull/55)
+    - This PR is for aids real-life distributed systems to evaluate a new version of a service or model under real production traffic without affecting end users.
+    - The implementation involved creating a second model-service deployment (only difference is in `version: shadow`), which is then mirrored through an `istio VirtualService` in the traffic management layer, and we can view the traffic flow from the logs of each service. 
+    - The extension proposal discusses the shortcomings of our current project with regards to the quality of the model that we deploy, and a proposal that uses release-engineering concepts that were learnt during this course.
+    - Ansible provisioning through vagrant was lacking the controller provisioning for steps 20-23. This PR intended on provisioning MetalLB, Istio, Nginx Ingress Controller, and Kubernetes Dashboard for the controller node in the `Vagrantfile`.
+
+- Taeyong Kwon:
+
+  - My Prs of the week: https://github.com/doda2025-team21/operation/pull/52 , doda2025-team21/model-service#10
+  - Merged the A4 grafana dashboard with A3 dashboard, while meeting all the requirements
+  - Fixed the consistent routing, did the istio canary documentation
+  - Model service was failing with resource stopwords not found error, because NLTK data wasnt included in the docker image. Fixed and built a new image
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/53 
+    - Now our app-canary version is also using ConfigMap and Secrets values (it was only stable before, extended it to canary)
+    - Previously, the stable deployment referenced the model service using a fixed service name. (canary was fine, only changed stable)
+    - Now, the model service can be relocated just by changing the Kubernetes config.
+
+# W10: Jan 26-27
