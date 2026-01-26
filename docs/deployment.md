@@ -65,7 +65,16 @@ Optional variables (via `.env`):
 
 ## A2: Kubernetes cluster provisioning
 
-(TODO) Describe the abstract cluster setup and core components introduced in A2.
+A2 introduces a **self-hosted Kubernetes cluster** that was configured to serve as a platform to host our application and perform various features on the upcoming assignments. A2 specifically dealt with cluster provisioning without any application workloads or deployments, a bare-metal cluster. 
+
+The focus was on establishing a stable, reproducible cluster with networking, ingress, observability, and Istio readiness.
+
+Ideas:
+1. Mention idempotence
+2. Separation of concerns (vagrant and ansible)
+3. General Kubernetes infrastructure and network communication
+4. Reason for switching from docker to kubernetes
+5. Could potentially discuss about configMaps, secrets, volume mounting, and general kubernetes resources (deployments, pods, services, virtualService, destinationRule).
 
 ## A3: Helm-based deployment and monitoring
 
