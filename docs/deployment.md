@@ -76,10 +76,8 @@ service-level relations.
 
 ### Deployment structure
 
-A4 introduces Istio service mesh for traffic management, enabling canary releases
-with consistent routing and sticky sessions. The deployment builds on A3 by adding
-Istio traffic management resources and extends monitoring with experiment-specific
-Grafana dashboards.
+A4 introduces istio service mesh for traffic management, enabling canary releases
+with consistent routing and sticky sessions(is in fix). The deployment builds on A3 by adding Istio traffic management resources and extends monitoring with grafana dashboards.
 
 #### Deployed Resources
 
@@ -110,10 +108,10 @@ Grafana dashboards.
 
 **Configuration** (ConfigMaps for app settings, Secrets for credentials)
 
-#### Consistent Routing (Old→Old, New→New)
+#### Consistent Routing (Old to old, new to new)
 
-A critical requirement is ensuring version consistency between app and model-service.
-This is achieved through **dedicated Kubernetes Services** with version-specific selectors:
+One requirement was to ensure version consistency between app and model-service.
+This is achieved through dedicated Kubernetes Services with version specific selectors:
 
 ```
 app-stable deployment                    model-service-stable deployment
@@ -132,10 +130,10 @@ The Istio Ingress Gateway is provisioned during cluster setup with label
 `istio: ingressgateway`. The Helm chart makes this configurable via
 `istio.ingressGateway.selector` in values.yaml for different clusters.
 
-### Request/data flow
+### How the data flows
 
 1. User accesses `http://sms-istio.local/sms/` (requires `/etc/hosts` entry: `192.168.56.91 sms-istio.local`)
-2. **Istio Ingress Gateway** → **Gateway** → **VirtualService** (90/10 split or header-based routing)
+2. **Istio Ingress Gateway** → **Gateway** → **VirtualService** (canaryheader based routing)
 3. **DestinationRule** applies sticky session via `sms-session` cookie (TTL: 1 hour)
 4. **EnvoyFilter** checks rate limit (10 req/min per user, returns 429 if exceeded)
 5. Request reaches `app-stable` or `app-canary` pod
@@ -160,14 +158,14 @@ evaluates VirtualService rules and reads the `sms-session` cookie for sticky ses
 
 ### Additional Use Case: Rate Limiting
 
-Per-user rate limiting using an EnvoyFilter with local rate limit configuration.
+Per user rate limiting using an EnvoyFilter with local rate limit configuration.
 Users (by IP) are allowed 10 requests per minute; exceeding returns HTTP 429.
 Configured via `istio.rateLimiting` in values.yaml (burst size, tokens per refill,
 fill interval). The EnvoyFilter injects this into the Ingress Gateway's HTTP filter chain.
 
 ### Access points
 
-| Endpoint | URL/Command | Headers/Notes |
+| Endpoint | URL/ Command| Headers/Notes |
 |----------|-------------|---------------|
 | App (via Istio) | `http://sms-istio.local/sms/` | Requires `/etc/hosts`: `192.168.56.91 sms-istio.local` |
 | Force canary | `curl -H "x-canary: true" http://sms-istio.local/sms/` | Always routes to canary version |
@@ -182,14 +180,4 @@ fill interval). The EnvoyFilter injects this into the Ingress Gateway's HTTP fil
 
 ### Continuous Experimentation Support
 
-The deployment supports A/B testing between stable and canary versions:
-
-1. **Traffic Split**: VirtualService routes 90% to stable, 10% to canary
-2. **Consistent Routing**: Each app version calls its matching model service
-3. **Sticky Sessions**: Users stay on their assigned version for the session duration
-4. **Metrics Collection**: Both versions expose identical Prometheus metrics
-5. **Dashboard Comparison**: Grafana dashboards visualize metrics side-by-side
-
-The experiment details (hypothesis, metrics, decision process) are documented in
-`docs/continuous-experimentation.md`.
-
+The deployment supports A/B testing between stable and canary version.
