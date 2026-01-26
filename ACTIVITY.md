@@ -205,3 +205,6 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Now, the model service can be relocated just by changing the Kubernetes config.
 
 # W10: Jan 26-27
+
+- Dibyendu Gupta:
+    - Working on deployment doc and presentation slides
