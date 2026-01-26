@@ -23,7 +23,31 @@ spec:
             subset: canary
           weight: 100
     {{- end }}
-    # Default routing with canary percentage
+    {{- if .Values.istio.stickySession.enabled }}
+    # Sticky session: route to stable if cookie says stable
+    - match:
+        - headers:
+            cookie:
+              regex: ".*{{ .Values.istio.stickySession.cookieName }}=stable.*"
+      route:
+        - destination:
+            host: {{ .Values.app.name }}
+            port:
+              number: {{ .Values.app.port }}
+            subset: stable
+    # Sticky session: route to canary if cookie says canary
+    - match:
+        - headers:
+            cookie:
+              regex: ".*{{ .Values.istio.stickySession.cookieName }}=canary.*"
+      route:
+        - destination:
+            host: {{ .Values.app.name }}
+            port:
+              number: {{ .Values.app.port }}
+            subset: canary
+    {{- end }}
+    # Default weighted routing - sets sticky session cookie per destination
     - route:
         - destination:
             host: {{ .Values.app.name }}
@@ -31,6 +55,12 @@ spec:
               number: {{ .Values.app.port }}
             subset: stable
           weight: {{ sub 100 (int .Values.istio.canary.weight) }}
+          {{- if .Values.istio.stickySession.enabled }}
+          headers:
+            response:
+              add:
+                Set-Cookie: "{{ .Values.istio.stickySession.cookieName }}=stable; Path=/; Max-Age=3600"
+          {{- end }}
         {{- if .Values.istio.canary.enabled }}
         - destination:
             host: {{ .Values.app.name }}
@@ -38,5 +68,11 @@ spec:
               number: {{ .Values.app.port }}
             subset: canary
           weight: {{ .Values.istio.canary.weight }}
+          {{- if .Values.istio.stickySession.enabled }}
+          headers:
+            response:
+              add:
+                Set-Cookie: "{{ .Values.istio.stickySession.cookieName }}=canary; Path=/; Max-Age=3600"
+          {{- end }}
         {{- end }}
 {{- end }}

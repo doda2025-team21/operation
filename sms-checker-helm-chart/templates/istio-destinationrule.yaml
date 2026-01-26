@@ -1,22 +1,12 @@
 {{- if .Values.istio.enabled }}
 # App DestinationRule
+# Note: Sticky sessions are handled by VirtualService cookie matching, not consistentHash
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: {{ .Values.app.name }}-destinationrule
 spec:
   host: {{ .Values.app.name }}
-  {{- if .Values.istio.stickySession.enabled }}
-  trafficPolicy:
-    connectionPool:
-      http:
-        h2UpgradePolicy: DO_NOT_UPGRADE
-    loadBalancer:
-      consistentHash:
-        httpCookie:
-          name: {{ .Values.istio.stickySession.cookieName }}
-          ttl: {{ .Values.istio.stickySession.ttl }}
-  {{- end }}
   subsets:
     - name: stable
       labels:
