@@ -24,7 +24,7 @@ spec:
           weight: 100
     {{- end }}
     {{- if .Values.istio.stickySession.enabled }}
-    # Sticky session: route to stable if cookie says stable
+    # Sticky session: route to stable if cookie says stable 
     - match:
         - headers:
             cookie:
