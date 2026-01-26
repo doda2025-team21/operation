@@ -224,7 +224,38 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*stable.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*canary.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -250,16 +281,27 @@
         {
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(sms_classification_duration_seconds_sum[10m])) / sum(rate(sms_classification_duration_seconds_count[10m]))",
+          "expr": "sum(rate(sms_classification_duration_seconds_sum{pod=~\"app-stable.*\"}[10m])) / sum(rate(sms_classification_duration_seconds_count{pod=~\"app-stable.*\"}[10m]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "legendFormat": "__auto",
+          "legendFormat": "stable",
           "range": true,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "expr": "sum(rate(sms_classification_duration_seconds_sum{pod=~\"app-canary.*\"}[10m])) / sum(rate(sms_classification_duration_seconds_count{pod=~\"app-canary.*\"}[10m]))",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "legendFormat": "canary",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
         }
       ],
-      "title": "Average Classification Latency",
+      "title": "Average Classification Latency: Stable vs Canary",
       "type": "timeseries"
     },
     {
@@ -413,7 +455,38 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*stable.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*canary.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -442,17 +515,32 @@
             "uid": "prometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "rate(sms_requests_total{endpoint=\"metrics\"}[10m])",
+          "editorMode": "code",
+          "expr": "rate(sms_requests_total{pod=~\"app-stable.*\"}[10m])",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "legendFormat": "__auto",
+          "legendFormat": "stable",
           "range": true,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "expr": "rate(sms_requests_total{pod=~\"app-canary.*\"}[10m])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "legendFormat": "canary",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
         }
       ],
-      "title": "Comparing Throughput and Stability",
+      "title": "Request Rate: Stable vs Canary",
       "type": "timeseries"
     },
     {
@@ -460,27 +548,53 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Traffic distribution between stable and canary",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stable"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
-              },
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Canary"
+            },
+            "properties": [
               {
-                "color": "red",
-                "value": 80
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -488,41 +602,57 @@
         "x": 12,
         "y": 16
       },
-      "id": 6,
+      "id": 7,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["percent"]
+        },
+        "pieType": "pie",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "11.4.0",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "editorMode": "code",
-          "expr": "sum(rate(sms_classification_duration_seconds_sum[10m])) / sum(rate(sms_classification_duration_seconds_count[10m]))",
-          "legendFormat": "__auto",
+          "expr": "sum(increase(sms_requests_total{pod=~\"app-stable.*\"}[30m])) or vector(0)",
+          "legendFormat": "Stable",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(sms_requests_total{pod=~\"app-canary.*\"}[30m])) or vector(0)",
+          "legendFormat": "Canary",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "Average Classification Latency",
-      "type": "stat"
+      "title": "Traffic Distribution",
+      "type": "piechart"
     }
   ],
   "preload": false,
   "schemaVersion": 40,
-  "tags": [],
+  "tags": ["continuous-experimentation", "canary", "a-b-testing"],
   "templating": {
     "list": []
   },
@@ -532,7 +662,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "A4 Supporting the Decision Process",
+  "title": "A4 Decision Process - Stable vs Canary",
   "uid": "advcrlk",
   "version": 1,
   "weekStart": ""

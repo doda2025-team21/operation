@@ -1,9 +1,7 @@
 {{- if .Values.istio.enabled }}
-# VirtualService for model-service - for direct model-service access and testing
-# NOTE: Consistent routing (old→old, new→new) is now achieved via version-specific services:
-#   - app-stable calls model-service-stable directly
-#   - app-canary calls model-service-canary directly
-# This VirtualService handles traffic to the main model-service endpoint (for testing/metrics)
+
+
+
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -13,30 +11,19 @@ spec:
     - {{ .Values.model.name }}
   http:
     {{- if .Values.istio.canary.enabled }}
-    # Header-based routing for explicit canary testing
+    # Route from canary app to canary model
     - match:
-        - headers:
-            x-model-canary:
-              exact: "true"
+        - sourceLabels:
+            version: canary
       route:
         - destination:
             host: {{ .Values.model.name }}
             subset: canary
-    # Weight-based traffic split for A/B testing (matches app canary weight)
-    - route:
-        - destination:
-            host: {{ .Values.model.name }}
-            subset: stable
-          weight: {{ sub 100 (int .Values.istio.canary.weight) }}
-        - destination:
-            host: {{ .Values.model.name }}
-            subset: canary
-          weight: {{ .Values.istio.canary.weight }}
-    {{- else }}
-    - route:
-        - destination:
-            host: {{ .Values.model.name }}
-            subset: stable
     {{- end }}
+    # Default: route from stable app to stable model
+    - route:
+        - destination:
+            host: {{ .Values.model.name }}
+            subset: stable
 {{- end }}
 
