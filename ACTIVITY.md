@@ -207,7 +207,8 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 # W10: Jan 26-27
 
 - Dibyendu Gupta:
-    - Working on deployment doc and presentation slides
+    - My PR for this week: [A4: Deployment Documentation for K8 cluster](https://github.com/doda2025-team21/operation/pull/61)
+    - Finsishing up the deployment document and testing bug-fixes. Did an overall run-through of all project.
 
 - Guotao Gou:
     - My PRS of the week: https://github.com/doda2025-team21/operation/pull/59, https://github.com/doda2025-team21/app/pull/14
