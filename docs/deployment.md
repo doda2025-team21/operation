@@ -67,14 +67,101 @@ Optional variables (via `.env`):
 
 A2 introduces a **self-hosted Kubernetes cluster** that was configured to serve as a platform to host our application and perform various features on the upcoming assignments. A2 specifically dealt with cluster provisioning without any application workloads or deployments, a bare-metal cluster. 
 
-The focus was on establishing a stable, reproducible cluster with networking, ingress, observability, and Istio readiness.
+The focus was on establishing a stable, reproducible cluster with substantial idempotency, networking, ingress, observability, and Istio readiness. Provisioning of cluster is performed using `Vagrant` and `Ansible`.
 
-Ideas:
-1. Mention idempotence
-2. Separation of concerns (vagrant and ansible)
-3. General Kubernetes infrastructure and network communication
-4. Reason for switching from docker to kubernetes
-5. Could potentially discuss about configMaps, secrets, volume mounting, and general kubernetes resources (deployments, pods, services, virtualService, destinationRule).
+### Key Design Principles 
+
+| Concept                                                       | How it is implemented in our cluster and application                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Idempotence**                                               | Idempotence is achieved at multiple layers. Cluster provisioning (Vagrant + Ansible + kubeadm) is designed so repeated runs do not re-initialize an existing cluster. At runtime, Kubernetes itself enforces idempotence: applying the same manifests or Helm chart multiple times converges the system to the same desired state. |
+| **ConfigMaps + Secrets** | Non-sensitive and sensitive configuration are externalized from container images and injected at runtime using ConfigMaps and Secrets. This decouples configuration from code, avoids hardcoding credentials, and allows configuration changes or secret rotation without rebuilding or redeploying container images.                                |
+| **Volume Mounting**                         | Volumes are used to provide runtime-accessible data (e.g., model artifacts) independent of container lifecycles. This avoids embedding data in images and enables reproducibility, data persistence, and independent updates of models and application code.                                                                                         |
+| **Traffic Management**      | Istio routing resources externalize traffic behavior from application logic. VirtualServices define request routing and traffic splitting, while DestinationRules define subsets and consistency policies.                                                       |
+| **Separation of Concerns**                                    | Responsibilities are clearly separated across layers: provisioning (Vagrant/Ansible) is independent of deployment (Helm), application logic is independent of traffic routing (Istio), and observability is independent of business functionality.         |
+| 
+
+### Services/Installations in Nodes
+
+The control node runs all control-plane, ingress, mesh, and monitoring components, while worker nodes run application workloads, Envoy sidecars, and expose metrics.
+
+| Category                  | Control Node (`ctrl`)                                                      | Worker Nodes (`worker-*`)                         |
+| ------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------- |
+| **Container Runtime**     | Docker / containerd                                                        | Docker / containerd                               |
+| **Kubernetes Core**       | kubeadm, kubelet, kubectl, API Server, Scheduler, Controller Manager, etcd | kubelet, kube-proxy                               |
+| **Networking (CNI)**      | CNI plugin (Flannel / Calico)                                              | CNI plugin (Flannel / Calico)                     |
+| **Ingress**               | Ingress Controller (NGINX)                                                 | —                                                 |
+| **Service Mesh (Istio)**  | istiod, Istio Ingress Gateway                                              | Envoy sidecar (per pod)                           |
+| **Application Workloads** | —                                                                          | app-service, model-service (stable & canary pods) |
+| **Monitoring**            | Prometheus, Prometheus Operator, Alertmanager, Grafana                     | Metrics endpoints, scrape targets                 |
+| **Storage (optional)**    | Helm-managed volumes / configs                                             | hostPath volumes (if used)                        |
+| **Provisioning & Ops**    | Vagrant, Ansible, Helm                                                     | —                                                 |
+
+
+### Traffic Flow
+
+```
+External Traffic
+       |
+       v
++-------------------+
+| Istio Gateway     |   (or Kubernetes Ingress)
++-------------------+
+       |
+       v
++-------------------+
+| VirtualService    |
+| (traffic rules)   |
+| - route by weight |
+| - route by subset |
++-------------------+
+       |
+       v
++-------------------+
+| DestinationRule   |
+| (subsets)         |
+| - stable          |
+| - canary          |
+| (map labels ->    |
+|  pod versions)    |
++-------------------+
+       |
+       v
++-------------------------------+
+| Service: sms-frontend         |
+| - stable endpoint             |
+| - load balancing              |
+| - central hub                 |
++-------------------------------+
+       |
+       v
+   +---------+   +---------+   +---------+
+   | Pod v1  |   | Pod v2  |   | Pod v3  |
+   | stable  |   | stable  |   | canary  |
+   +---------+   +---------+   +---------+
+        ^             ^             ^
+        |             |             |
+        +-------------+-------------+
+                      |
+        +-------------------------------+
+        | ServiceMonitor (Prometheus)   |
+        | - scrapes frontend metrics    |
+        +-------------------------------+
+
+Deployment
+-----------
++-------------------------------+
+| Deployment                    |
+| - defines image & version     |
+| - creates pods with labels    |
+|   version=stable / canary     |
++-------------------------------+
+```
+
+Traffic flow through the k8 cluster:
+1. Incoming traffic enters the cluster through an Istio Gateway (or Ingress).
+2.  VirtualService applies routing rules (e.g., 90/10 split) and forwards traffic to subsets defined in the DestinationRule.
+3. Subsets map to pod versions via labels managed by the Deployment.
+4. Kubernetes Service provides a stable endpoint and load balancing, while Prometheus monitors the service via a ServiceMonitor.
 
 ## A3: Helm-based deployment and monitoring
 
