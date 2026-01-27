@@ -77,24 +77,41 @@ The focus was on establishing a stable, reproducible cluster with substantial id
 | **ConfigMaps + Secrets** | Non-sensitive and sensitive configuration are externalized from container images and injected at runtime using ConfigMaps and Secrets. This decouples configuration from code, avoids hardcoding credentials, and allows configuration changes or secret rotation without rebuilding or redeploying container images.                                |
 | **Volume Mounting**                         | Volumes are used to provide runtime-accessible data (e.g., model artifacts) independent of container lifecycles. This avoids embedding data in images and enables reproducibility, data persistence, and independent updates of models and application code.                                                                                         |
 | **Traffic Management**      | Istio routing resources externalize traffic behavior from application logic. VirtualServices define request routing and traffic splitting, while DestinationRules define subsets and consistency policies.                                                       |
-| **Separation of Concerns**                                    | Responsibilities are clearly separated across layers: provisioning (Vagrant/Ansible) is independent of deployment (Helm), application logic is independent of traffic routing (Istio), and observability is independent of business functionality.         |
+| **Separation of Concerns**                                    | Responsibilities are clearly separated across layers: provisioning (Vagrant/Ansible) is independent of deployment (Helm), application logic is independent of traffic routing (Istio), and observability is independent of business functionality. Project has been modularised at every possible step.        |
 | 
 
-### Services/Installations in Nodes
+### Network Information
 
-The control node runs all control-plane, ingress, mesh, and monitoring components, while worker nodes run application workloads, Envoy sidecars, and expose metrics.
+The control-plane node (ctrl) is responsible for cluster coordination and decision-making, while worker nodes focus exclusively on executing workloads, enabling clear separation of responsibilities and predictable cluster behavior.
 
-| Category                  | Control Node (`ctrl`)                                                      | Worker Nodes (`worker-*`)                         |
-| ------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------- |
-| **Container Runtime**     | Docker / containerd                                                        | Docker / containerd                               |
-| **Kubernetes Core**       | kubeadm, kubelet, kubectl, API Server, Scheduler, Controller Manager, etcd | kubelet, kube-proxy                               |
-| **Networking (CNI)**      | CNI plugin (Flannel / Calico)                                              | CNI plugin (Flannel / Calico)                     |
-| **Ingress**               | Ingress Controller (NGINX)                                                 | —                                                 |
-| **Service Mesh (Istio)**  | istiod, Istio Ingress Gateway                                              | Envoy sidecar (per pod)                           |
-| **Application Workloads** | —                                                                          | app-service, model-service (stable & canary pods) |
-| **Monitoring**            | Prometheus, Prometheus Operator, Alertmanager, Grafana                     | Metrics endpoints, scrape targets                 |
-| **Storage (optional)**    | Helm-managed volumes / configs                                             | hostPath volumes (if used)                        |
-| **Provisioning & Ops**    | Vagrant, Ansible, Helm                                                     | —                                                 |
+| Node    | IP Address        | Role           | Components                              |
+|---------|-------------------|----------------|-----------------------------------------|
+| ctrl    | 192.168.56.100    | Control Plane  | API Server, etcd, Scheduler, NFS Server  |
+| node-1 | 192.168.56.101    | Worker Node      | Application Pods        |
+| node-2 | 192.168.56.102    | Worker Node    | Application Pods         |
+
+Control-plane components run exclusively on the ctrl node to manage cluster state and scheduling, while platform services such as MetalLB, Istio, ingress, and monitoring are deployed as Pods on worker nodes, using the node network for external access but remaining logically cluster-scoped.
+
+
+| Component | Runs On | Relation to Nodes |
+|--------|---------|-------------------|
+| Kubernetes API Server | Control plane node (`ctrl`) | Central entry point for all cluster operations; handles kubectl, controllers, and node communication |
+| etcd | Control plane node (`ctrl`) | Persistent key-value store holding the entire cluster state |
+| Scheduler | Control plane node (`ctrl`) | Assigns Pods to worker nodes based on resource availability and constraints |
+| Controller Manager | Control plane node (`ctrl`) | Continuously reconciles desired vs actual cluster state |
+| kubelet | All nodes | Node agent that manages Pods and reports node status to the control plane |
+| MetalLB | Worker nodes (Pods) | Assigns external IPs to LoadBalancer Services and advertises them via the node network |
+| Istio Control Plane (`istiod`) | Worker nodes (Pods) | Manages service mesh configuration and sidecar behavior |
+| Istio IngressGateway | Worker nodes (Pod) | Entry point for external traffic into the Istio service mesh |
+| Ingress Controller (NGINX) | Worker nodes (Pods) | Processes Kubernetes Ingress resources and routes HTTP(S) traffic |
+| Monitoring Stack (Prometheus, Grafana, Alertmanager) | Worker nodes (Pods) | Collects metrics, evaluates alerts, and provides observability dashboards |
+
+#### DNS Mappings
+- sms.local → Nginx Ingress → App Service
+- sms-istio.local → Istio Gateway → App Service
+- grafana.local → Grafana Dashboard
+- model-service, app → Internal Kubernetes DNS names
+- dashboard.local → Kubernetes Dashboard
 
 
 ### Traffic Flow
@@ -127,7 +144,7 @@ External Traffic
        |
        v
 +-------------------------------+
-| Service: sms-frontend         |
+| Service: app-frontend         |
 | - stable endpoint             |
 | - load balancing              |
 | - central hub                 |
