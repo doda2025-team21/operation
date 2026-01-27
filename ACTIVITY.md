@@ -218,4 +218,9 @@ and lastly it supports both volume mounts for custom models and automatic downlo
 - Ceylin Ece:
     - My PR of the week: https://github.com/doda2025-team21/operation/pull/62 
     - I worked on the deployment document (A3 part). 
-    - Tested out the entire project from start to finish. 
+    - Tested out the entire project from start to finish.
+ 
+- Taeyong Kwon:
+    - My Pr for this week: https://github.com/doda2025-team21/operation/pull/57 , https://github.com/doda2025-team21/operation/pull/58
+    - I worked on the deployment document (A4)
+    - I fixed the sticky session by looking at the official istio repository. I modified destinationrule just to define the subset (canary/stable), requests are handled entirely in the VS. first request goes to weigted routing and subsequent requests get checked for the cookie using regex matching.
