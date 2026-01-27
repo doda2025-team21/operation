@@ -6,8 +6,8 @@ app:
   image: "ghcr.io/doda2025-team21/app"
   pullPolicy: Always
 
-  tag: "0.2.17"      # Stable version tag (use actual available tag from your registry)
-  canaryTag: "0.2.14" # Canary version tag - with new UI design
+  tag: "1.0.0"      # Stable version tag (use actual available tag from your registry)
+  canaryTag: "1.1.0" # Canary version tag - with new UI design
 
 
   service:
