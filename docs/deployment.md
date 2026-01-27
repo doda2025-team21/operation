@@ -82,7 +82,7 @@ Deployment creates pods with specific labels.
 - Stable pods: version: stable
 - Canary pods: version: canary
 
-The app container port is 8080, while the model-service container pod is 8081.
+The app container port is 8080, while the model-service container port is 8081.
 
 ### Services
 
@@ -92,9 +92,14 @@ Our Service enables us to load-balance requests across the Pods in the cluster.
 
 ### Ingress
 
-Ingress creates a set of rules within our cluster, an ingress resource that can route based on a set of rules. It provides a way to route HTTP and HTTPS traffic from outside the cluster to services running inside the cluster, based on these rules. Moreover, Ingress Controller implements a Kubernetes Ingress. It works as a load-balancing algorithm. MetalLB provides a network load balancer implementation for Kubernetes clusters. For example, if a request comes for an app that maps to an IP address supported by the Ingress. It comes in and routes based on a set of rules.
+Ingress defines routing rules that direct HTTP and HTTPS traffic from outside the cluster to the appropriate services inside. These rules are based on hostnames and URL paths.
 
-With Ingress, you can route multiple backend services with a single IP address, and then do path-based routing.
+The Ingress Controller enforces these routing rules. When a request arrives at an IP address assigned by MetalLB, the controller evaluates the routing rules and forwards the traffic to the correct Service. 
+
+Since we have a bare-metal cluster operator, we need MetalLB to provide a network load balancer. MetalLB assigns external IP addresses to load-balancer Services. 
+
+Ingress enables routing to multiple backend services with a single IP address via path-based routing rules. 
+
 
 ### Secrets and ConfigMaps
 
