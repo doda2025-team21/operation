@@ -214,3 +214,8 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - My PRS of the week: https://github.com/doda2025-team21/operation/pull/59, https://github.com/doda2025-team21/app/pull/14
     - Rebuilt the app oldUI and newUI image. So it now use VersionUtil and will printout in main function.
     - I also tested and ensure the whole process run successfully.
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/62 
+    - I worked on the deployment document (A3 part). 
+    - Tested out the entire project from start to finish. 
