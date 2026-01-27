@@ -686,11 +686,10 @@ spec:
 ### 2. VirtualService (`app-vs`)
 
 
-The virtualservice contains routing rules that supports two following ways of reaching the canary:
-- **force canary (for testing)**: Requests with `x-canary: true` header go to canary 1005.
-- **normal traffic split**: All requests follow the default traffic split (90% stable, 10% canary)
-
-This matches the requirement to demonstrate small percentage of canary release and allowing special requests using special headers.
+The virtualservice contains routing rules that support:
+- **force canary (for testing)**: Requests with `x-canary: true` header go to canary 100%
+- **sticky sessions**: Requests with `sms-session=stable` or `sms-session=canary` cookie route to the matching subset
+- **normal traffic split**: New requests follow the default traffic split (90% stable, 10% canary) and receive a `Set-Cookie` header
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -711,26 +710,52 @@ spec:
             host: app
             subset: canary
           weight: 100
-    # Default weighted routing
+    # Sticky session: route to stable if cookie says stable
+    - match:
+        - headers:
+            cookie:
+              regex: ".*sms-session=stable.*"
+      route:
+        - destination:
+            host: app
+            subset: stable
+    # Sticky session: route to canary if cookie says canary
+    - match:
+        - headers:
+            cookie:
+              regex: ".*sms-session=canary.*"
+      route:
+        - destination:
+            host: app
+            subset: canary
+    # Default weighted routing - sets sticky session cookie
     - route:
         - destination:
             host: app
             subset: stable
           weight: 90
+          headers:
+            response:
+              add:
+                Set-Cookie: "sms-session=stable; Path=/; Max-Age=3600"
         - destination:
             host: app
             subset: canary
           weight: 10
+          headers:
+            response:
+              add:
+                Set-Cookie: "sms-session=canary; Path=/; Max-Age=3600"
 ```
 
 ### 3. DestinationRule (`app-destinationrule`)
 
-It defines two subsets that istio can route to:
+It defines two subsets that Istio can route to:
 
-**stable** -> pods labelled stable version
-**canary** -> pods labelled canary version
+- **stable** → pods labelled with `version: stable`
+- **canary** → pods labelled with `version: canary`
 
-and also enables sticky sessions using http cookie ( so that the same user keeps hitting the same subset)
+Note: Sticky sessions are handled by VirtualService cookie matching (see above), not by DestinationRule consistentHash, because consistentHash does not work correctly with weighted routing across subsets.
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -739,12 +764,6 @@ metadata:
   name: app-destinationrule
 spec:
   host: app
-  trafficPolicy:
-    loadBalancer:
-      consistentHash:
-        httpCookie:
-          name: sms-session  # Sticky session cookie
-          ttl: 3600s
   subsets:
     - name: stable
       labels:
@@ -756,13 +775,15 @@ spec:
 
 ## Sticky Sessions
 
-Sticky sessions ensure that once a user is routed to a specific version (stable or canary), they continue to see that version on subsequent requests. This is implemented using consistent hashing with an HTTP cookie.
+Sticky sessions ensure that once a user is routed to a specific version (stable or canary), they continue to see that version on subsequent requests. This is implemented using VirtualService cookie matching with response headers.
 
 ### How It Works
 1. On first request, Istio routes based on the configured weights (90/10)
-2. Istio sets a cookie (`sms-session`) that identifies the selected subset
-3. Subsequent requests from the same user (with the cookie) are routed to the same subset
-4. Cookie TTL is 3600 seconds (1 hour) by default but we can change this.
+2. The VirtualService adds a `Set-Cookie` response header (`sms-session=stable` or `sms-session=canary`) based on which version handled the request
+3. On subsequent requests, the VirtualService checks for the cookie using regex matching
+4. If `sms-session=stable` cookie is found, traffic routes directly to stable subset
+5. If `sms-session=canary` cookie is found, traffic routes directly to canary subset
+6. Cookie TTL is 3600 seconds (1 hour) by default
 
 ### Configuration
 ```yaml
@@ -823,18 +844,57 @@ curl -v -H "Host: sms-istio.local" -H "x-canary: true" http://192.168.56.91/sms/
 ```
 
 #### 3. Test Sticky Sessions
+
+Sticky sessions use a cookie to ensure users stay on the same version (stable or canary) across requests.
+
+**Test 1: Verify cookie is set on first request**
 ```bash
-# First request - SetCookie header in response
-curl -v -c cookies.txt -H "Host: sms-istio.local" http://192.168.56.91/sms/
-
-# Subsequent requests with cookie - should go to same version
-curl -v -b cookies.txt -H "Host: sms-istio.local" http://192.168.56.91/sms/
+rm -f cookies.txt
+curl -v -c cookies.txt -H "Host: sms-istio.local" http://192.168.56.91/sms/ 2>&1 | grep -i "set-cookie"
 ```
-# > Cookie: sms-session="5cc84964593959a8"	Cookie is being sent with the request
-< HTTP/1.1 200 OK	Request succeeded
-< server: istio-envoy	Traffic routed through Istio proxy
+Expected output: `set-cookie: sms-session=stable; Path=/; Max-Age=3600` (or `canary`)
 
-Above is the example of sticky session working correctly
+**Test 2: Verify sticky routing to stable**
+```bash
+# Set cookie to stable
+rm -f cookies.txt
+echo "sms-istio.local	FALSE	/	FALSE	1769999999	sms-session	stable" > cookies.txt
+
+# Send multiple requests with the stable cookie
+for i in {1..3}; do
+  curl -s -b cookies.txt -H "Host: sms-istio.local" -H "Content-Type: application/json" \
+    -X POST -d "{\"sms\":\"STABLE_TEST_$i\"}" http://192.168.56.91/sms/
+  echo ""
+  sleep 2
+done
+
+# Check logs - all requests should appear in stable, none in canary
+KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=stable --tail=20 | grep "STABLE_TEST"
+KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=canary --tail=20 | grep "STABLE_TEST"
+```
+
+**Test 3: Verify sticky routing to canary**
+```bash
+# Set cookie to canary
+rm -f cookies.txt
+echo "sms-istio.local	FALSE	/	FALSE	1769999999	sms-session	canary" > cookies.txt
+
+# Send multiple requests with the canary cookie
+for i in {1..3}; do
+  curl -s -b cookies.txt -H "Host: sms-istio.local" -H "Content-Type: application/json" \
+    -X POST -d "{\"sms\":\"CANARY_TEST_$i\"}" http://192.168.56.91/sms/
+  echo ""
+  sleep 2
+done
+
+# Check logs - all requests should appear in canary, none in stable
+KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=canary --tail=20 | grep "CANARY_TEST"
+KUBECONFIG=./kubeconfig kubectl logs -l app=app,version=stable --tail=20 | grep "CANARY_TEST"
+```
+
+Expected results:
+- With `sms-session=stable` cookie: All requests go to stable pods only
+- With `sms-session=canary` cookie: All requests go to canary pods only
 
 
 #### 4. Verify Version in Response
