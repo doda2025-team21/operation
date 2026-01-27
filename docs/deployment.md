@@ -69,8 +69,62 @@ Optional variables (via `.env`):
 
 ## A3: Helm-based deployment and monitoring
 
-(TODO) Describe Helm release structure, Prometheus/Grafana integration, and
-service-level relations.
+### Deployments
+
+Deployment manages the set of Pods to run our application workload. It provides declarative updates to the applications. Some of its functionalities include specifying the image version used in the app, the number of pods to run, how they should be updated, and ensuring that these pods are always available.
+
+Since manually updating containerized applications is time-consuming, we can automate this process using Deployments.
+
+We have Deployments for both the app and model-service. Both deployments contain container images, ports, and environment variables as part of the pod definition.
+
+Deployment creates pods with specific labels.
+
+- Stable pods: version: stable
+- Canary pods: version: canary
+
+The app container port is 8080, while the model-service container pod is 8081.
+
+### Services
+
+Services are used to map network traffic to the Pods in our cluster. Since we want to expose the port specified in Deployments as a service within the cluster, we need to create a Service. All traffic first goes to the Service before being forwarded to available Pods. Services enable the communication between our app and the model-service.
+
+Our Service enables us to load-balance requests across the Pods in the cluster.
+
+### Ingress
+
+Ingress creates a set of rules within our cluster, an ingress resource that can route based on a set of rules. It provides a way to route HTTP and HTTPS traffic from outside the cluster to services running inside the cluster, based on these rules. Moreover, Ingress Controller implements a Kubernetes Ingress. It works as a load-balancing algorithm. MetalLB provides a network load balancer implementation for Kubernetes clusters. For example, if a request comes for an app that maps to an IP address supported by the Ingress. It comes in and routes based on a set of rules.
+
+With Ingress, you can route multiple backend services with a single IP address, and then do path-based routing.
+
+### Secrets and ConfigMaps
+
+Secrets and ConfigMaps are used for external configuration of individual values. And, Deployment/Pod references these key/value pairs. We have environmental variables, and we retrieve their values from ConfigMaps and Secrets.
+
+In our case, we get the values:
+
+- ConfigMaps: WELCOME_MESSAGE, DUMMY_VALUE
+- Secrets: API_KEY, PASSWORD
+
+### Helm Chart
+
+A Helm Chart is a collection of files that describe a set of related Kubernetes resources.
+
+By using `values.yaml` in our “sms-checker-helm-chart,” we can specify the default configuration values for this chart. Inside this chart, we also have a “templates” directory, which contains templates that, when combined with values, generate valid Kubernetes manifest files.
+
+Our `values.yaml` file contains default configuration values for values such as ports, replica counts, and image versions. 
+
+### Monitoring
+
+The Helm chart includes kube-prometheus-stack, which installs:
+
+- Prometheus: We have our custom metrics for our app and model-service; and they are exposed by our application code. These custom metrics are related to traffic on the app and the performance of model-service. The app uses port 9090, while the model service uses port 9091. Our app exposes /actuator/prometheus, and our model-service exposes /metrics. Prometheus scrapes these metrics endpoints.
+- Grafana: We visualize the scraped custom metrics using dashboards. Through these dashboards, we can monitor application behaviour. The Grafana dashboards are automatically installed by the central Helm chart. 
+- ServiceMonitors: which auto-discovers app metrics
+
+Additionally, we use Alerting, which configures an AlertManager with a PrometheusRule. A corresponding Alert is raised via email. 
+
+Also, the Kubernetes Dashboard enables us to explore deployed cluster resources. 
+
 
 ## A4: Istio traffic management and experimentation
 
