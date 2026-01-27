@@ -205,3 +205,22 @@ and lastly it supports both volume mounts for custom models and automatic downlo
     - Now, the model service can be relocated just by changing the Kubernetes config.
 
 # W10: Jan 26-27
+
+- Dibyendu Gupta:
+    - My PR for this week: [A4: Deployment Documentation for K8 cluster](https://github.com/doda2025-team21/operation/pull/61)
+    - Finsishing up the deployment document and testing bug-fixes. Did an overall run-through of all project.
+
+- Guotao Gou:
+    - My PRS of the week: https://github.com/doda2025-team21/operation/pull/59, https://github.com/doda2025-team21/app/pull/14
+    - Rebuilt the app oldUI and newUI image. So it now use VersionUtil and will printout in main function.
+    - I also tested and ensure the whole process run successfully.
+
+- Ceylin Ece:
+    - My PR of the week: https://github.com/doda2025-team21/operation/pull/62 
+    - I worked on the deployment document (A3 part). 
+    - Tested out the entire project from start to finish.
+ 
+- Taeyong Kwon:
+    - My Pr for this week: https://github.com/doda2025-team21/operation/pull/57 , https://github.com/doda2025-team21/operation/pull/58
+    - I worked on the deployment document (A4)
+    - I fixed the sticky session by looking at the official istio repository. I modified destinationrule just to define the subset (canary/stable), requests are handled entirely in the VS. first request goes to weigted routing and subsequent requests get checked for the cookie using regex matching.
